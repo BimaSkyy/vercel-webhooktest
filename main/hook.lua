@@ -147,12 +147,21 @@ local function formatAngka(angka)
     return suf~="" and string.format("%.2f%s",val,suf) or string.format("%.0f",angka)
 end
 
+local function escapeStr(s)
+    s = s:gsub('\\', '\\\\') -- \ harus duluan
+    s = s:gsub('"', '\\"')
+    s = s:gsub('\n', '\\n')
+    s = s:gsub('\r', '\\r')
+    s = s:gsub('\t', '\\t')
+    return s
+end
+
 local function tabelKeJson(tbl)
     if type(tbl)~="table" then return "{}" end
     local bagian = {}
     for k,v in pairs(tbl) do
         if type(v)=="string" then
-            bagian[#bagian+1] = string.format('"%s":"%s"',k,v:gsub('"','\\"'))
+            bagian[#bagian+1] = string.format('"%s":"%s"',k,escapeStr(v))
         elseif type(v)=="number" then
             bagian[#bagian+1] = string.format('"%s":%s',k,v)
         elseif type(v)=="table" then
