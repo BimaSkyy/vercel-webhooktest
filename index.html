@@ -3,149 +3,214 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pemantau Data Farm</title>
+  <title>Pemantau Data Farm - Versi Hidup</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* ✨ Animasi saat isi berubah */
-    .kotak-data {
-      transition: all 0.3s ease;
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #475569 #1e293b;
     }
-    .kotak-data.perbarui {
-      background-color: rgba(16, 185, 129, 0.15);
-      transform: scale(1.01);
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 999px; }
+
+    /* Efek saat ada perubahan */
+    .kotak-utama { transition: all 0.25s ease; }
+    .kotak-berubah { background-color: rgba(16, 185, 129, 0.12); transform: scale(1.008); }
+    .angka-naik {
+      color: #4ade80;
+      font-weight: bold;
+      animation: loncat 0.4s ease;
+      position: relative;
     }
-    .daftar-barang::-webkit-scrollbar {
-      width: 6px;
+    .tanda-tambah {
+      position: absolute;
+      left: -28px;
+      font-size: 0.85rem;
+      color: #fbbf24;
+      animation: melayang 0.8s ease-out forwards;
+      pointer-events: none;
     }
-    .daftar-barang::-webkit-scrollbar-track {
-      background: #1e293b;
-      border-radius: 999px;
+    @keyframes loncat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    @keyframes melayang { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-18px)} }
+
+    /* Gulir halus & daftar panen berjalan */
+    .daftar-gulir {
+      max-height: 240px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
     }
-    .daftar-barang::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 999px;
-    }
+    .barang-baru { animation: muncul 0.5s ease; }
+    @keyframes muncul { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+
+    .uang-kotak { transition: all 0.3s ease; }
+    .uang-naik { animation: kilau 0.6s ease; background-color: rgba(234, 179, 8, 0.15); }
+    @keyframes kilau { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 12px rgba(234,179,8,0.3)} }
   </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-4">
+<body class="bg-slate-900 text-white min-h-screen p-3 md:p-4">
   <div class="w-full max-w-3xl mx-auto">
     <!-- Judul -->
-    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400 flex items-center justify-center gap-2">
-      📡 Data Pemantauan Langsung
+    <h1 class="text-2xl font-bold text-center mb-5 text-emerald-400 flex items-center justify-center gap-2">
+      📡 Pemantauan Langsung <span class="text-sm text-slate-500">• Hidup</span>
     </h1>
 
-    <!-- 🟦 BAGIAN 1: INFORMASI UTAMA -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
-        <span class="text-slate-400 text-sm">🕒 Waktu Terima</span>
-        <div id="waktu" class="font-bold text-lg text-white mt-1">—</div>
+    <!-- Info Atas -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="p-3 bg-slate-800 rounded-xl border border-slate-700">
+        <div class="text-slate-400 text-sm">🕒 Waktu Terima</div>
+        <div id="waktu" class="font-semibold text-lg">—</div>
       </div>
-      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
-        <span class="text-slate-400 text-sm">📶 Asal Pengirim</span>
-        <div id="pengirim" class="font-bold text-lg text-emerald-300 mt-1">—</div>
-      </div>
-    </div>
-
-    <!-- 🟩 BAGIAN 2: DATA UTAMA -->
-    <div id="kotakLaporan" class="kotak-data bg-slate-800 rounded-2xl border border-slate-700 shadow-xl p-5 mb-5">
-      <div id="kontenLaporan" class="text-sm leading-relaxed">
-        <span class="text-amber-400">Menunggu kiriman data...</span>
+      <div class="p-3 bg-slate-800 rounded-xl border border-slate-700">
+        <div class="text-slate-400 text-sm">📶 Pengirim</div>
+        <div id="pengirim" class="font-semibold text-emerald-300">—</div>
       </div>
     </div>
 
-    <!-- 🟪 BAGIAN 3: RINGKASAN DI BAWAH -->
-    <div id="kotakRingkasan" class="grid grid-cols-2 gap-4 mb-5">
-      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
-        <div class="text-slate-400 text-sm">📦 Total Berat</div>
-        <div id="ringkasanBerat" class="font-bold text-lg text-sky-400">—</div>
-      </div>
-      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
-        <div class="text-slate-400 text-sm">🧾 Total Item</div>
-        <div id="ringkasanJumlah" class="font-bold text-lg text-sky-400">—</div>
+    <!-- Kotak Utama -->
+    <div id="kotakUtama" class="kotak-utama bg-slate-800 rounded-2xl border border-slate-700 shadow-xl p-4 mb-4">
+      <div id="kontenUtama" class="daftar-gulir text-sm leading-relaxed pr-2">
+        <span class="text-amber-400">Menunggu data dari Termux...</span>
       </div>
     </div>
 
-    <p class="text-center text-slate-500 text-sm">🔄 Memeriksa data baru setiap 3 detik</p>
+    <!-- Ringkasan Bawah -->
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div id="kotakUang" class="uang-kotak p-3 bg-slate-800 rounded-xl border border-slate-700 text-center">
+        <div class="text-slate-400 text-sm">💰 Uang</div>
+        <div id="nilaiUang" class="font-bold text-lg text-yellow-400">—</div>
+      </div>
+      <div class="p-3 bg-slate-800 rounded-xl border border-slate-700 text-center">
+        <div class="text-slate-400 text-sm">📦 Berat</div>
+        <div id="nilaiBerat" class="font-bold text-lg text-sky-400">—</div>
+      </div>
+      <div class="p-3 bg-slate-800 rounded-xl border border-slate-700 text-center">
+        <div class="text-slate-400 text-sm">🧾 Jumlah</div>
+        <div id="nilaiItem" class="font-bold text-lg text-sky-400">—</div>
+      </div>
+    </div>
+
+    <!-- Daftar Panen Terpisah -->
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 p-4">
+      <h3 class="text-sky-400 font-semibold mb-2">🌾 Log Panen Terbaru</h3>
+      <div id="logPanen" class="daftar-gulir max-h-[160px] text-sm pr-2 text-emerald-300">
+        <span class="text-slate-500">Belum ada panen...</span>
+      </div>
+    </div>
+
+    <p class="text-center text-slate-500 text-sm mt-4">🔄 Memeriksa & memperbarui otomatis</p>
   </div>
 
   <script>
-    let isiSebelumnya = "";
+    let dataSebelum = { uang:0, barang:{}, panen:[] };
+    let teksLama = "";
 
-    // ✨ Tandai ada pembaruan dengan animasi
-    function beriEfekPerbarui() {
-      const kotak = document.getElementById("kotakLaporan");
-      kotak.classList.add("perbarui");
-      setTimeout(() => kotak.classList.remove("perbarui"), 400);
+    // Efek perubahan kotak
+    function tandaiBerubah() {
+      const k = document.getElementById("kotakUtama");
+      k.classList.add("kotak-berubah");
+      setTimeout(()=>k.classList.remove("kotak-berubah"), 400);
     }
 
-    // 📝 Pisahkan & susun tampilan jadi kotak-kotak teratur
-    function formatDanPisahkan(teksMentah) {
-      if (!teksMentah || teksMentah.trim() === "") return '<span class="text-amber-400">⚠️ Data kosong</span>';
+    // Bandingkan & beri tanda +nilai
+    function bandingDanTandai(nama, nilaiBaru, tipe="barang") {
+      const lama = dataSebelum.barang[nama] || 0;
+      if (nilaiBaru > lama) {
+        const tambah = nilaiBaru - lama;
+        return `<span class="angka-naik">${nilaiBaru}</span><span class="tanda-tambah">+${tambah}</span>`;
+      }
+      return nilaiBaru;
+    }
 
-      const baris = teksMentah.split('\n');
-      let html = "";
-      let bagian = { judul:"", uang:"", barang:[], panen:[], ringkasan:"" };
+    // Susun tampilan lengkap
+    function susunTampilan(teks) {
+      if (!teks) return '<span class="text-amber-400">Data kosong</span>';
+      const baris = teks.split("\n");
+      let html = "", bagianPanen = [], uangSekarang = 0;
+      let barangBaru = {};
 
-      // Kelompokkan per bagian
       for (const b of baris) {
-        const t = b.trim();
-        if (!t) continue;
+        const t = b.trim(); if (!t) continue;
 
         if (t.includes("DATA FARM") || t.startsWith("👤")) {
-          bagian.judul += `<div class="text-emerald-400 font-bold text-xl mb-2">${t}</div>`;
-        } else if (t.includes("Jumlah Uang")) {
-          bagian.uang = `<div class="text-lg font-semibold text-yellow-400 mb-4">💰 ${t}</div>`;
-        } else if (t.includes("Item Backpack")) {
-          html += `<div class="text-sky-400 font-semibold mb-2 flex items-center gap-2">🎒 ${t}</div><div class="daftar-barang pl-2 max-h-[220px] overflow-y-auto pr-2">`;
-        } else if (t.includes("Hasil Panen")) {
-          html += `</div><div class="text-sky-400 font-semibold mb-3 mt-5 flex items-center gap-2">🌾 ${t}</div><div class="daftar-barang pl-2 max-h-[180px] overflow-y-auto pr-2">`;
-        } else if (t.match(/x\d+/) || t.includes("KG")) {
-          html += `<div class="text-emerald-300 mb-1">• ${t}</div>`;
-        } else if (t.includes("Total Berat") || t.includes("Total Item")) {
-          bagian.ringkasan = t;
-        } else if (t.includes("Waktu: ")) {
-          html += `<div class="text-amber-400 mt-4 text-sm">🕐 ${t}</div>`;
+          html += `<div class="text-emerald-400 font-bold text-xl mb-2">${t}</div>`;
+        } else if (t.includes("Jumlah Uang:")) {
+          const val = t.match(/[\d\.MKTB]+/);
+          uangSekarang = val ? val[0] : 0;
+          const naik = uangSekarang !== dataSebelum.uang;
+          html += `<div class="text-lg font-semibold text-yellow-400 mb-3 ${naik?'angka-naik':''}">💰 ${t}</div>`;
+          if (naik) {
+            document.getElementById("kotakUang").classList.add("uang-naik");
+            setTimeout(()=>document.getElementById("kotakUang").classList.remove("uang-naik"),600);
+          }
+        } else if (t.includes("Item Backpack:")) {
+          html += `<div class="text-sky-400 font-semibold mb-2">🎒 ${t}</div><div class="pl-2">`;
+        } else if (t.includes("Hasil Panen:")) {
+          html += `</div><div class="text-sky-400 font-semibold mb-3 mt-4">🌾 ${t}</div><div class="pl-2">`;
+        } else if (/^•?\s*(\w.*?)\s+x(\d+)/.test(t)) {
+          const [_, nama, jml] = t.match(/^•?\s*(.*?)\s+x(\d+)/);
+          barangBaru[nama] = parseInt(jml);
+          const tampilJml = bandingDanTandai(nama, parseInt(jml));
+          html += `<div class="mb-1 relative">• ${nama} x${tampilJml}</div>`;
+        } else if (t.includes("KG") && !t.includes("Total Berat")) {
+          bagianPanen.push(t);
+          html += `<div class="text-emerald-300 mb-1 barang-baru">• ${t}</div>`;
+        } else if (t.includes("Total Berat") || t.includes("Total Item") || t.includes("Waktu:")) {
+          html += `<div class="text-amber-400 mt-3 text-sm">${t}</div>`;
+        } else {
+          html += `<div class="text-slate-300 mb-1">${t}</div>`;
         }
       }
 
-      // Gabung semua jadi tampilan rapi
-      return bagian.judul + bagian.uang + html + `</div>`;
+      // Simpan untuk perbandingan selanjutnya
+      dataSebelum = { uang:uangSekarang, barang:barangBaru, panen:bagianPanen };
+
+      // Masukkan log panen terpisah
+      document.getElementById("logPanen").innerHTML = bagianPanen.slice(-12).map(p=>`<div class="py-1 border-b border-slate-700/50 barang-baru">${p}</div>`).join("");
+
+      return html;
     }
 
-    // 🎯 Ambil data & tampilkan
-    async function ambilDanTampil() {
+    // Ambil & perbarui semua
+    async function perbaruiSemua() {
       try {
         const res = await fetch("/api/webhook", {cache:"no-store"});
-        if (!res.ok) throw new Error("Gagal ambil");
-
+        if (!res.ok) throw Error("Gagal");
         const d = await res.json();
         const teksBaru = d.konten || "";
 
-        // ✨ Mainkan animasi kalau ada perubahan
-        if (teksBaru !== isiSebelumnya) {
-          isiSebelumnya = teksBaru;
-          beriEfekPerbarui();
+        if (teksBaru !== teksLama) {
+          teksLama = teksBaru;
+          tandaiBerubah();
+
+          // Tampilkan utama
+          document.getElementById("kontenUtama").innerHTML = susunTampilan(teksBaru);
+          // Gulir otomatis ke bawah
+          setTimeout(()=>{
+            const el = document.getElementById("kontenUtama");
+            el.scrollTop = el.scrollHeight;
+            document.getElementById("logPanen").scrollTop = document.getElementById("logPanen").scrollHeight;
+          }, 80);
+
+          // Ringkasan terpisah
+          const br = teksBaru.match(/Total Berat:\s*([\d\.MKGT]+)/);
+          const it = teksBaru.match(/Total Item:\s*(\d+)/);
+          document.getElementById("nilaiBerat").textContent = br ? br[1]+" KG" : "—";
+          document.getElementById("nilaiItem").textContent = it ? it[1] : "—";
         }
 
-        // Masukkan nilai
+        // Waktu & pengirim selalu diperbarui
         document.getElementById("waktu").textContent = d.waktu || "—";
         document.getElementById("pengirim").textContent = d.pengirim || "—";
-        document.getElementById("kontenLaporan").innerHTML = formatDanPisahkan(teksBaru);
+        document.getElementById("nilaiUang").textContent = dataSebelum.uang || "—";
 
-        // 📊 Ambil angka ringkasan terpisah
-        const cocokBerat = teksBaru.match(/Total Berat: ([\d\.MKGT]+)/);
-        const cocokJumlah = teksBaru.match(/Total Item: (\d+)/);
-        document.getElementById("ringkasanBerat").textContent = cocokBerat ? cocokBerat[1] + " KG" : "—";
-        document.getElementById("ringkasanJumlah").textContent = cocokJumlah ? cocokJumlah[1] : "—";
-
-      } catch (err) {
-        document.getElementById("kontenLaporan").innerHTML = 
-          '<span class="text-red-400">❌ Gagal terhubung — pastikan Termux berjalan</span>';
+      } catch (e) {
+        document.getElementById("kontenUtama").innerHTML = '<span class="text-red-400">❌ Terputus — cek Termux</span>';
       }
     }
 
-    ambilDanTampil();
-    setInterval(ambilDanTampil, 3000);
+    perbaruiSemua();
+    setInterval(perbaruiSemua, 3000);
   </script>
 </body>
 </html>
