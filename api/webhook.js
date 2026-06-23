@@ -1,9 +1,4 @@
-// Simpan data terakhir di memori
-let dataTerakhir = {
-  waktu: "--:--:--",
-  sumber: "Belum ada koneksi",
-  data: {}
-};
+let dataTerakhir = { waktu:"--:--:--", sumber:"", data:{} };
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -12,7 +7,6 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // ✅ Terima kiriman baru
   if (req.method === "POST") {
     try {
       const masuk = req.body || {};
@@ -22,15 +16,8 @@ module.exports = async (req, res) => {
         data: masuk.data || {}
       };
       return res.status(200).json({pesan:"Diterima", ...dataTerakhir});
-    } catch (e) {
-      return res.status(400).json({pesan:"Gagal baca data"});
-    }
+    } catch(e) { return res.status(400).json({pesan:"Gagal baca"}) }
   }
 
-  // ✅ Kirim ke halaman web
-  if (req.method === "GET") {
-    return res.status(200).json(dataTerakhir);
-  }
-
-  res.status(405).json({pesan:"Metode tidak diizinkan"});
+  return res.status(200).json(dataTerakhir);
 };
