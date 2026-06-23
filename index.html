@@ -5,79 +5,147 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pemantau Data Farm</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ✨ Animasi saat isi berubah */
+    .kotak-data {
+      transition: all 0.3s ease;
+    }
+    .kotak-data.perbarui {
+      background-color: rgba(16, 185, 129, 0.15);
+      transform: scale(1.01);
+    }
+    .daftar-barang::-webkit-scrollbar {
+      width: 6px;
+    }
+    .daftar-barang::-webkit-scrollbar-track {
+      background: #1e293b;
+      border-radius: 999px;
+    }
+    .daftar-barang::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 999px;
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-3xl bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700">
-    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">📡 Data Pemantauan Langsung</h1>
+<body class="bg-slate-900 text-white min-h-screen p-4">
+  <div class="w-full max-w-3xl mx-auto">
+    <!-- Judul -->
+    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400 flex items-center justify-center gap-2">
+      📡 Data Pemantauan Langsung
+    </h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <div class="p-4 bg-slate-700/50 rounded-xl">
-        <span class="text-slate-400">Waktu Terima:</span>
-        <div id="waktu" class="font-semibold text-lg">—</div>
+    <!-- 🟦 BAGIAN 1: INFORMASI UTAMA -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
+        <span class="text-slate-400 text-sm">🕒 Waktu Terima</span>
+        <div id="waktu" class="font-bold text-lg text-white mt-1">—</div>
       </div>
-      <div class="p-4 bg-slate-700/50 rounded-xl">
-        <span class="text-slate-400">Asal Pengirim:</span>
-        <div id="pengirim" class="font-semibold text-lg">—</div>
-      </div>
-    </div>
-
-    <div class="mt-2">
-      <span class="text-slate-400 font-medium">📋 Isi Laporan:</span>
-      <div id="konten" class="mt-3 bg-slate-900 p-5 rounded-xl overflow-x-auto text-sm leading-relaxed min-h-[150px]">
-        <span class="text-amber-400">Menunggu kiriman dari Termux...</span>
+      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
+        <span class="text-slate-400 text-sm">📶 Asal Pengirim</span>
+        <div id="pengirim" class="font-bold text-lg text-emerald-300 mt-1">—</div>
       </div>
     </div>
 
-    <p class="text-center text-slate-500 text-sm mt-6">🔄 Memeriksa data baru setiap 3 detik</p>
+    <!-- 🟩 BAGIAN 2: DATA UTAMA -->
+    <div id="kotakLaporan" class="kotak-data bg-slate-800 rounded-2xl border border-slate-700 shadow-xl p-5 mb-5">
+      <div id="kontenLaporan" class="text-sm leading-relaxed">
+        <span class="text-amber-400">Menunggu kiriman data...</span>
+      </div>
+    </div>
+
+    <!-- 🟪 BAGIAN 3: RINGKASAN DI BAWAH -->
+    <div id="kotakRingkasan" class="grid grid-cols-2 gap-4 mb-5">
+      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
+        <div class="text-slate-400 text-sm">📦 Total Berat</div>
+        <div id="ringkasanBerat" class="font-bold text-lg text-sky-400">—</div>
+      </div>
+      <div class="kotak-data p-4 bg-slate-800 rounded-xl border border-slate-700 text-center">
+        <div class="text-slate-400 text-sm">🧾 Total Item</div>
+        <div id="ringkasanJumlah" class="font-bold text-lg text-sky-400">—</div>
+      </div>
+    </div>
+
+    <p class="text-center text-slate-500 text-sm">🔄 Memeriksa data baru setiap 3 detik</p>
   </div>
 
   <script>
-    // Ubah teks mentah jadi tampilan rapi
-    function formatTeks(teks) {
-      if (!teks || !teks.trim()) return '<span class="text-slate-500">— kosong —</span>';
-      const baris = teks.split('\n');
-      let html = '';
+    let isiSebelumnya = "";
 
-      baris.forEach(b => {
-        const t = b.trim();
-        if (!t) return;
-
-        if (t.includes("DATA FARM") || t.startsWith("👤")) {
-          html += `<div class="text-emerald-400 font-bold text-lg mb-2">${t}</div>`;
-        } else if (/^[─-]{5,}$/.test(t)) {
-          html += `<div class="border-b border-slate-700 my-3"></div>`;
-        } else if (t.includes("Uang") || t.includes("Item") || t.includes("Panen") || t.includes("Total")) {
-          html += `<div class="text-sky-400 font-semibold mt-2 mb-1">${t}</div>`;
-        } else if (/x\d+/.test(t) || t.includes("KG")) {
-          html += `<div class="text-emerald-300 pl-3 mb-1">• ${t}</div>`;
-        } else if (t.includes("Waktu") || t.includes("Masih Berjalan")) {
-          html += `<div class="text-amber-400 mt-3 text-sm">${t}</div>`;
-        } else {
-          html += `<div class="text-slate-300 mb-1">${t}</div>`;
-        }
-      });
-      return html;
+    // ✨ Tandai ada pembaruan dengan animasi
+    function beriEfekPerbarui() {
+      const kotak = document.getElementById("kotakLaporan");
+      kotak.classList.add("perbarui");
+      setTimeout(() => kotak.classList.remove("perbarui"), 400);
     }
 
-    // Ambil data berulang kali
+    // 📝 Pisahkan & susun tampilan jadi kotak-kotak teratur
+    function formatDanPisahkan(teksMentah) {
+      if (!teksMentah || teksMentah.trim() === "") return '<span class="text-amber-400">⚠️ Data kosong</span>';
+
+      const baris = teksMentah.split('\n');
+      let html = "";
+      let bagian = { judul:"", uang:"", barang:[], panen:[], ringkasan:"" };
+
+      // Kelompokkan per bagian
+      for (const b of baris) {
+        const t = b.trim();
+        if (!t) continue;
+
+        if (t.includes("DATA FARM") || t.startsWith("👤")) {
+          bagian.judul += `<div class="text-emerald-400 font-bold text-xl mb-2">${t}</div>`;
+        } else if (t.includes("Jumlah Uang")) {
+          bagian.uang = `<div class="text-lg font-semibold text-yellow-400 mb-4">💰 ${t}</div>`;
+        } else if (t.includes("Item Backpack")) {
+          html += `<div class="text-sky-400 font-semibold mb-2 flex items-center gap-2">🎒 ${t}</div><div class="daftar-barang pl-2 max-h-[220px] overflow-y-auto pr-2">`;
+        } else if (t.includes("Hasil Panen")) {
+          html += `</div><div class="text-sky-400 font-semibold mb-3 mt-5 flex items-center gap-2">🌾 ${t}</div><div class="daftar-barang pl-2 max-h-[180px] overflow-y-auto pr-2">`;
+        } else if (t.match(/x\d+/) || t.includes("KG")) {
+          html += `<div class="text-emerald-300 mb-1">• ${t}</div>`;
+        } else if (t.includes("Total Berat") || t.includes("Total Item")) {
+          bagian.ringkasan = t;
+        } else if (t.includes("Waktu: ")) {
+          html += `<div class="text-amber-400 mt-4 text-sm">🕐 ${t}</div>`;
+        }
+      }
+
+      // Gabung semua jadi tampilan rapi
+      return bagian.judul + bagian.uang + html + `</div>`;
+    }
+
+    // 🎯 Ambil data & tampilkan
     async function ambilDanTampil() {
       try {
-        const res = await fetch("/api/webhook", {cache:"no-store"}); // ❗Tolak data lama dari tembolok
-        if (!res.ok) throw new Error("Respon tidak normal");
+        const res = await fetch("/api/webhook", {cache:"no-store"});
+        if (!res.ok) throw new Error("Gagal ambil");
 
         const d = await res.json();
+        const teksBaru = d.konten || "";
+
+        // ✨ Mainkan animasi kalau ada perubahan
+        if (teksBaru !== isiSebelumnya) {
+          isiSebelumnya = teksBaru;
+          beriEfekPerbarui();
+        }
+
+        // Masukkan nilai
         document.getElementById("waktu").textContent = d.waktu || "—";
         document.getElementById("pengirim").textContent = d.pengirim || "—";
-        document.getElementById("konten").innerHTML = formatTeks(d.konten);
+        document.getElementById("kontenLaporan").innerHTML = formatDanPisahkan(teksBaru);
+
+        // 📊 Ambil angka ringkasan terpisah
+        const cocokBerat = teksBaru.match(/Total Berat: ([\d\.MKGT]+)/);
+        const cocokJumlah = teksBaru.match(/Total Item: (\d+)/);
+        document.getElementById("ringkasanBerat").textContent = cocokBerat ? cocokBerat[1] + " KG" : "—";
+        document.getElementById("ringkasanJumlah").textContent = cocokJumlah ? cocokJumlah[1] : "—";
 
       } catch (err) {
-        document.getElementById("konten").innerHTML = 
-          '<span class="text-red-400">⚠️ Tidak dapat terhubung — pastikan skrip Termux berjalan & baru saja mengirim data</span>';
+        document.getElementById("kontenLaporan").innerHTML = 
+          '<span class="text-red-400">❌ Gagal terhubung — pastikan Termux berjalan</span>';
       }
     }
 
     ambilDanTampil();
-    setInterval(ambilDanTampil, 3000); // ✅ Berjalan otomatis tanpa perlu segarkan
+    setInterval(ambilDanTampil, 3000);
   </script>
 </body>
 </html>
