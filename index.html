@@ -20,7 +20,7 @@
     <!-- Isi Data - Tampilan Terstruktur -->
     <div class="mt-6">
       <span class="text-slate-400 font-medium">📋 Isi Data:</span>
-      <div id="isiData" class="mt-3 bg-slate-900 p-5 rounded-xl overflow-x-auto text-sm leading-relaxed">
+      <div id="isiData" class="mt-3 bg-slate-900 p-5 rounded-xl overflow-x-auto text-sm leading-relaxed min-h-[120px]">
         <span class="text-slate-500">Menunggu data...</span>
       </div>
     </div>
@@ -29,41 +29,40 @@
   </div>
 
   <script>
-    // Fungsi ubah teks mentah jadi tampilan rapi dengan pemisah & bagian
+    // Fungsi ubah teks mentah jadi tampilan rapi
     function formatDataTeks(teksMentah) {
-      if (!teksMentah) return '<span class="text-red-400">⚠️ Data kosong</span>';
+      if (!teksMentah || teksMentah.trim() === "") {
+        return '<span class="text-amber-400">⚠️ Data kosong atau belum terkirim</span>';
+      }
 
-      // Pisah per baris
       const baris = teksMentah.split('\n');
       let hasilHTML = '';
-      let adaGaris = false;
 
       baris.forEach(barisTeks => {
         const teks = barisTeks.trim();
         if (!teks) return;
 
-        // Judul utama → besar & hijau terang
+        // Judul utama & Nama Pemain
         if (teks.includes('DATA FARM') || teks.startsWith('👤')) {
           hasilHTML += `<div class="text-emerald-400 font-bold text-lg mb-2 mt-1">${teks}</div>`;
-          adaGaris = true;
         }
-        // Garis pemisah → ubah jadi garis cantik
-        else if (teks.match(/^[-─]+$/)) {
+        // Garis pemisah
+        else if (teks.match(/^[─-]{5,}$/)) {
           hasilHTML += `<div class="border-b border-slate-700 my-4"></div>`;
         }
-        // Bagian judul kategori → tebal & biru
-        else if (teks.includes('Item Backpack') || teks.includes('Hasil Panen') || teks.includes('Total') || teks.includes('Uang')) {
+        // Kategori utama
+        else if (teks.includes('Uang') || teks.includes('Item Backpack') || teks.includes('Hasil Panen') || teks.includes('Total')) {
           hasilHTML += `<div class="text-sky-400 font-semibold mt-3 mb-2">${teks}</div>`;
         }
-        // Daftar barang → masukkan dalam daftar dengan sedikit jarak
-        else if (teks.match(/^[a-zA-Z0-9\s\[\]]+ x\d+/) || teks.match(/\[.*KG\]/)) {
+        // Daftar barang
+        else if (teks.match(/x\d+/) || teks.includes('KG')) {
           hasilHTML += `<div class="text-emerald-300 pl-3 mb-1">• ${teks}</div>`;
         }
-        // Waktu atau status lain → abu terang
-        else if (teks.includes('Waktu') || teks.includes('Berjalan')) {
+        // Waktu / Status
+        else if (teks.includes('Waktu') || teks.includes('Masih Berjalan')) {
           hasilHTML += `<div class="text-amber-400 mt-3 text-sm">${teks}</div>`;
         }
-        // Baris biasa
+        // Baris lain
         else {
           hasilHTML += `<div class="text-slate-300 mb-1">${teks}</div>`;
         }
@@ -72,27 +71,31 @@
       return hasilHTML;
     }
 
-    // Ambil data dari API & tampilkan
+    // Ambil data dari API dengan pengecekan ketat
     async function ambilData() {
       try {
         const res = await fetch("/api/webhook");
+        if (!res.ok) throw new Error("Respon tidak baik");
+
         const data = await res.json();
         
-        // Tampilkan waktu
-        document.getElementById("waktu").textContent = data.waktu;
-        
-        // Tampilkan data yang sudah diformat rapi
-        const elemenIsi = document.getElementById("isiData");
-        elemenIsi.innerHTML = formatDataTeks(data.isi);
+        // ✅ Baca dengan aman sesuai format yang dikirim Termux
+        const waktuTampil = data.waktu_lokal || data.waktu || "—";
+        const isiTeks = data.konten || data.isi || "";
+
+        // Tampilkan
+        document.getElementById("waktu").textContent = waktuTampil;
+        document.getElementById("isiData").innerHTML = formatDataTeks(isiTeks);
 
       } catch (err) {
+        console.error(err);
         document.getElementById("isiData").innerHTML = 
-          '<span class="text-red-400">❌ Gagal terhubung ke server</span>';
+          '<span class="text-red-400">❌ Gagal terhubung atau membaca data — pastikan skrip Termux sedang berjalan & sudah mengirim data minimal sekali</span>';
       }
     }
 
-    ambilData();         // Jalankan pertama kali
-    setInterval(ambilData, 3000); // Perbarui otomatis
+    ambilData();
+    setInterval(ambilData, 3000);
   </script>
 </body>
 </html>
