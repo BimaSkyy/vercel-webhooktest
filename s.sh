@@ -20,6 +20,9 @@ fi
 [ ! -f "$RELOG_ACCEPT" ] && echo "" > "$RELOG_ACCEPT"
 [ ! -f "$CHAT_CMD" ] && echo "" > "$CHAT_CMD"
 
+echo "=========================================="
+echo "🚀 SERVER DI LOKASI: $(pwd)"
+echo "=========================================="
 
 # 🛠️ Buat server Python
 cat > server_api.py << 'END_PY'
@@ -142,6 +145,7 @@ class Peladen(BaseHTTPRequestHandler):
             self._balas({"pesan": "tidak ada"}, 404)
 
 if __name__ == "__main__":
+    print("✅ Peladen siap di port 8080")
     HTTPServer(("0.0.0.0", 8080), Peladen).serve_forever()
 END_PY
 
@@ -154,17 +158,20 @@ python3 server_api.py &
 PID_SRV=$!
 
 # Jalankan terowongan Cloudflare
-# Jalankan cloudflare, filter hanya URL-nya
-cloudflared tunnel --url http://localhost:8080 2>&1 | grep --line-buffered -oP "https://[\w-]+\.trycloudflare\.com" | while read url; do echo "🌐 URL WEB: $url"; done &
+echo "🌐 Menghubungkan akses luar..."
+cloudflared tunnel --url http://localhost:8080 &
 PID_TUN=$!
 
 # 🔄 Pengawas Relog
+echo "🔍 Pantau perintah Relog berjalan..."
 while true; do
     if [ -s "$RELOG_FILE" ] && [ "$(tr -d '[:space:]' < "$RELOG_FILE")" = "true" ]; then
-                while true; do
+        echo "[🔄] Perintah Relog diterima"
+        while true; do
             sleep 0.5
             if [ -f "$RELOG_ACCEPT" ] && [ "$(tr -d '[:space:]' < "$RELOG_ACCEPT")" = "true" ]; then
-                                echo "" > "$RELOG_FILE"
+                echo "[✅] Relog selesai — bersihkan status"
+                echo "" > "$RELOG_FILE"
                 echo "" > "$RELOG_ACCEPT"
                 break
             fi
@@ -174,4 +181,4 @@ while true; do
 done
 
 # Hentikan semua kalau ditutup
-trap "true; kill $PID_SRV $PID_TUN 2>/dev/null; exit" INT TERM EXIT
+trap "echo '🛑 Berhenti...'; kill $PID_SRV $PID_TUN 2>/dev/null; exit" INT TERM EXIT
