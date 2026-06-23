@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pemantau Data Farm - Tampilan Lengkap</title>
+  <title>Pemantau Lengkap + Chat</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
@@ -16,253 +16,198 @@
     .baris-masuk { animation: masuk 0.3s ease; }
     @keyframes masuk { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
 
-    .tanda-tambah { color:#4ade80; font-weight:bold; }
-    .tanda-jual { color:#f87171; font-weight:bold; }
-    .tanda-perubahan { font-size:0.75rem; margin-left:0.5rem; opacity:0.85; }
-
-    .kotak-uang { transition: 0.3s; }
-    .berubah-uang { animation:kilau 0.5s ease; background:rgba(234,179,8,0.15); }
-    @keyframes kilau { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 10px rgba(234,179,8,0.3)} }
-
     .tinggi-panjang { max-height: 400px; overflow-y: auto; scroll-behavior: smooth; }
-    .tinggi-log { max-height: 260px; overflow-y: auto; scroll-behavior: smooth; }
-    .tinggi-info { max-height: 220px; overflow-y: auto; scroll-behavior: smooth; }
-
-    .tombol-relog { transition: all 0.2s ease; }
-    .tombol-relog:disabled { opacity:0.5; cursor:not-allowed; }
-    .tombol-siap { background:#2563eb; }
-    .tombol-proses { background:#ea580c; animation:denyut 1s infinite; }
-    @keyframes denyut { 0%,100%{opacity:1} 50%{opacity:0.7} }
+    .tinggi-sedang { max-height: 280px; overflow-y: auto; scroll-behavior: smooth; }
+    .tinggi-pendek { max-height: 220px; overflow-y: auto; scroll-behavior: smooth; }
+    .whitespace-pre { white-space: pre-line; line-height: 1.6; }
   </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-3 md:p-4">
   <div class="w-full max-w-4xl mx-auto">
+    <!-- Atas -->
     <div class="flex items-center justify-between mb-5">
-      <h1 class="text-2xl font-bold text-emerald-400">📡 Pemantauan Langsung</h1>
-      <!-- ✅ TOMBOL RELOG -->
-      <button id="btnRelog" class="tombol-relog tombol-siap px-4 py-2 rounded-xl font-semibold shadow-lg">
-        🔄 Relog / Ganti Server
-      </button>
+      <h1 class="text-2xl font-bold text-emerald-400">📡 Pemantau Langsung</h1>
+      <button id="btnRelog" class="px-4 py-2 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700">🔄 Relog Server</button>
     </div>
 
-    <!-- Info Atas -->
     <div class="grid grid-cols-2 gap-3 mb-4">
-      <div class="panel p-3">
-        <div class="text-slate-400 text-sm">🕒 Waktu Terima</div>
-        <div id="waktu" class="font-semibold text-lg">—</div>
-      </div>
-      <div class="panel p-3">
-        <div class="text-slate-400 text-sm">📶 Status</div>
-        <div id="statusRelog" class="font-semibold text-sky-300">Siap</div>
-      </div>
+      <div class="panel p-3"><div class="text-slate-400 text-sm">🕒 Waktu</div><div id="waktu" class="font-semibold">—</div></div>
+      <div class="panel p-3"><div class="text-slate-400 text-sm">📶 Status</div><div id="statusRelog" class="font-semibold text-sky-300">Siap</div></div>
     </div>
 
-    <!-- Ringkasan -->
     <div class="grid grid-cols-3 gap-3 mb-4">
-      <div id="kotakUang" class="kotak-uang panel p-3 text-center">
-        <div class="text-slate-400 text-sm">💰 Uang</div>
-        <div id="nilaiUang" class="font-bold text-lg text-yellow-400">—</div>
-      </div>
-      <div class="panel p-3 text-center">
-        <div class="text-slate-400 text-sm">📦 Total Berat</div>
-        <div id="nilaiBerat" class="font-bold text-lg text-sky-400">—</div>
-      </div>
-      <div class="panel p-3 text-center">
-        <div class="text-slate-400 text-sm">🧾 Jumlah Barang</div>
-        <div id="nilaiJumlah" class="font-bold text-lg text-sky-400">—</div>
-      </div>
+      <div class="panel p-3 text-center"><div class="text-slate-400 text-sm">💰 Uang</div><div id="nilaiUang" class="font-bold text-lg text-yellow-400">—</div></div>
+      <div class="panel p-3 text-center"><div class="text-slate-400 text-sm">📦 Berat</div><div id="nilaiBerat" class="font-bold text-lg text-sky-400">—</div></div>
+      <div class="panel p-3 text-center"><div class="text-slate-400 text-sm">🧾 Jumlah</div><div id="nilaiJumlah" class="font-bold text-lg text-sky-400">—</div></div>
     </div>
 
-    <!-- ✅ CUACA & RESTOCK - DIPERBAIKI: BARIS BARU TERBACA & JARAK RAPI -->
+    <!-- Cuaca & Restock -->
     <div id="panelCuaca" class="panel p-4 mb-4">
-      <h3 class="text-sky-400 font-semibold mb-2">🌤 Cuaca & Waktu Restock</h3>
-      <div id="isiCuaca" class="tinggi-info text-sm pl-3 whitespace-pre-line leading-relaxed text-slate-200">
-        <span class="text-amber-400">Menunggu data...</span>
-      </div>
+      <h3 class="text-sky-400 font-semibold mb-2">🌤 Cuaca & Restock</h3>
+      <div id="isiCuaca" class="tinggi-pendek text-sm pl-3 whitespace-pre text-slate-200">Menunggu...</div>
     </div>
 
-    <!-- ✅ PET LIAR DI PETA -->
+    <!-- Pet di Peta -->
     <div id="panelPet" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🐾 Pet di Peta</h3>
-      <div id="isiPet" class="tinggi-info text-sm pl-3 text-emerald-300">
-        <span class="text-slate-500">— Belum terdeteksi —</span>
+      <div id="isiPet" class="tinggi-pendek text-sm pl-3 text-emerald-300 whitespace-pre">—</div>
+    </div>
+
+    <!-- ✅ DAFTAR PEMAIN -->
+    <div id="panelPemain" class="panel p-4 mb-4">
+      <h3 class="text-sky-400 font-semibold mb-2">👥 Pemain di Server (Urut Uang)</h3>
+      <div id="isiPemain" class="tinggi-pendek text-sm pl-3 whitespace-pre text-amber-200">—</div>
+    </div>
+
+    <!-- ✅ CHAT RIWAYAT -->
+    <div id="panelChat" class="panel p-4 mb-4">
+      <h3 class="text-sky-400 font-semibold mb-2">💬 Obrolan Terakhir</h3>
+      <div id="isiChat" class="tinggi-sedang text-sm pl-3 whitespace-pre text-slate-300">—</div>
+      <!-- ✅ KIRIM PESAN -->
+      <div class="mt-3 flex gap-2">
+        <input id="inputPesan" type="text" placeholder="Ketik pesan..." class="flex-1 bg-slate-700 rounded-lg px-3 py-2 text-white border border-slate-600 focus:outline-none focus:border-blue-500">
+        <button id="btnKirim" class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg font-semibold">Kirim</button>
       </div>
     </div>
 
-    <!-- 🎒 BARANG DI TAS - MUNCUL BARIS DEMI BARIS -->
+    <!-- Barang & Riwayat Lama -->
     <div id="panelBarang" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🎒 Barang di Tas</h3>
-      <div id="isiBarang" class="tinggi-panjang text-sm pl-3">
-        <span class="text-amber-400">Menunggu data...</span>
-      </div>
+      <div id="isiBarang" class="tinggi-panjang text-sm pl-3">—</div>
     </div>
 
-    <!-- 📜 LOG: PANEN + PENJUALAN DALAM SATU TEMPAT -->
     <div id="panelLog" class="panel p-4">
-      <h3 class="text-sky-400 font-semibold mb-2">📜 Riwayat Panen & Penjualan</h3>
-      <div id="isiLog" class="tinggi-log text-sm pl-3">
-        <span class="text-slate-500">— Belum ada riwayat —</span>
-      </div>
+      <h3 class="text-sky-400 font-semibold mb-2">📜 Riwayat Panen/Jual</h3>
+      <div id="isiLog" class="tinggi-sedang text-sm pl-3">—</div>
     </div>
 
-    <p class="text-center text-slate-500 text-sm mt-4">🔄 Memperbarui setiap 2 detik</p>
+    <p class="text-center text-slate-500 text-sm mt-4">🔄 Perbarui otomatis tiap 2 detik</p>
   </div>
 
   <script>
-    let simpan = { uang:"", barang:{}, berat:{}, riwayat:[] };
+    let simpan = { uang:"", barang:{}, riwayat:[] };
     const MAKS_LOG = 20;
     let teksLama = "";
     let sedangRelog = false;
 
-    // --- KENDALI TOMBOL RELOG ---
     const btnRelog = document.getElementById("btnRelog");
     const statusRelog = document.getElementById("statusRelog");
+    const btnKirim = document.getElementById("btnKirim");
+    const inputPesan = document.getElementById("inputPesan");
 
+    // Tombol Relog
     btnRelog.addEventListener("click", async () => {
-      if (sedangRelog) return;
       sedangRelog = true;
       btnRelog.disabled = true;
-      btnRelog.className = "tombol-relog tombol-proses px-4 py-2 rounded-xl font-semibold shadow-lg";
+      btnRelog.textContent = "⏳ Mengirim...";
       statusRelog.textContent = "Mengirim perintah...";
-
-      await fetch("/api/relog", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({perintah:"true"})
-      });
+      await fetch("/api/relog", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({perintah:"true"})});
     });
 
-    function tandai(id) {
-      const el = document.getElementById(id);
-      el.classList.add("panel-aktif");
-      setTimeout(()=>el.classList.remove("panel-aktif"),400);
+    // ✅ Tombol Kirim Pesan
+    async function kirimPesan() {
+      const teks = inputPesan.value.trim();
+      if(!teks) return;
+      btnKirim.disabled = true;
+      btnKirim.textContent = "Mengirim...";
+      await fetch("/api/kirimchat", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pesan:teks})});
+      inputPesan.value = "";
+      btnKirim.disabled = false;
+      btnKirim.textContent = "Kirim";
+    }
+    btnKirim.addEventListener("click", kirimPesan);
+    inputPesan.addEventListener("keydown", e=>{if(e.key==="Enter")kirimPesan()});
+
+    function tandai(id){const el=document.getElementById(id);el.classList.add("panel-aktif");setTimeout(()=>el.classList.remove("panel-aktif"),400);}
+
+    function cekPerubahan(nama,jml,jenis){
+      const l=simpan[jenis][nama]||0;
+      if(jml===l)return{teks:jml,ada:false};
+      simpan[jenis][nama]=jml;
+      return jml>l?{teks:`<span class="text-green-400">${jml}</span> (+${jml-l})`,ada:true}:{teks:`<span class="text-red-400">${jml}</span> (-${l-jml})`,ada:true};
     }
 
-    // --- BANDINGKAN DAN BUAT TEKS PERUBAHAN ---
-    function cekPerubahan(nama, jmlBaru, jenis) {
-      const lama = simpan[jenis][nama] || 0;
-      if (jmlBaru === lama) return {teks:jmlBaru, ada:false};
-
-      simpan[jenis][nama] = jmlBaru;
-      if (jmlBaru > lama) {
-        return {teks:`<span class="tanda-tambah">${jmlBaru}</span><span class="tanda-perubahan">(+${jmlBaru-lama})</span>`, ada:true, selisih:jmlBaru-lama};
-      } else {
-        return {teks:`<span class="tanda-jual">${jmlBaru}</span><span class="tanda-perubahan">(-${lama-jmlBaru})</span>`, ada:true};
-      }
-    }
-
-    async function muatData() {
-      try {
-        // --- Cek status relog dulu ---
-        const stRelog = await fetch("/api/relog");
-        const relogInfo = await stRelog.json();
-        if (relogInfo.perintah === "true") {
-          statusRelog.textContent = "⏳ Menunggu eksekusi di perangkat";
-          btnRelog.className = "tombol-relog tombol-proses px-4 py-2 rounded-xl font-semibold shadow-lg";
-        } else {
-          if (sedangRelog) {
-            sedangRelog = false;
-            btnRelog.disabled = false;
-            btnRelog.className = "tombol-relog tombol-siap px-4 py-2 rounded-xl font-semibold shadow-lg";
-            statusRelog.textContent = "✅ Siap";
-          } else {
-            statusRelog.textContent = "✅ Siap";
-          }
+    async function muatData(){
+      try{
+        // Cek status relog
+        const stRelog=await fetch("/api/relog");
+        const relog=await stRelog.json();
+        if(relog.perintah==="true"){
+          statusRelog.textContent="⏳ Menunggu eksekusi";
+          btnRelog.textContent="⏳ Berjalan";
+        }else{
+          sedangRelog=false;
+          btnRelog.disabled=false;
+          btnRelog.textContent="🔄 Relog Server";
+          statusRelog.textContent="✅ Siap";
         }
 
-        // --- Ambil data utama ---
-        const res = await fetch("/api/webhook", {cache:"no-store"});
-        if (!res.ok) throw new Error("Putus");
-        const d = await res.json();
-        const data = d.data || {};
-        const teksBaru = JSON.stringify(data);
+        // Ambil data utama
+        const res=await fetch("/api/webhook",{cache:"no-store"});
+        if(!res.ok)throw new Error("Putus");
+        const d=await res.json();
+        const data=d.data||{};
+        const teksBaru=JSON.stringify(data);
 
-        if (teksBaru !== teksLama) {
-          teksLama = teksBaru;
+        if(teksBaru!==teksLama){
+          teksLama=teksBaru;
 
-          // Info dasar
-          document.getElementById("waktu").textContent = d.waktu || "—";
-          const uangBaru = data.uangFormat || "0";
-          if (uangBaru !== simpan.uang) {
-            simpan.uang = uangBaru;
-            document.getElementById("kotakUang").classList.add("berubah-uang");
-            setTimeout(()=>document.getElementById("kotakUang").classList.remove("berubah-uang"),600);
-          }
-          document.getElementById("nilaiUang").textContent = uangBaru;
-          document.getElementById("nilaiBerat").textContent = `${data.totalBeratFormat||"0"} KG`;
-          document.getElementById("nilaiJumlah").textContent = `${data.totalItem||0} buah`;
+          // Dasar
+          document.getElementById("waktu").textContent=d.waktu||"—";
+          document.getElementById("nilaiUang").textContent=data.uangTeks||"0";
+          document.getElementById("nilaiBerat").textContent=(data.beratTeks||"0")+" KG";
+          document.getElementById("nilaiJumlah").textContent=(data.totalItem||0)+" buah";
 
-          // ✅ TAMPILKAN CUACA & RESTOCK - BACA BARIS DENGAN BENAR
-          if (data.weatherRestockText) {
-            document.getElementById("isiCuaca").textContent = data.weatherRestockText;
-            tandai("panelCuaca");
-          }
+          // Cuaca & Restock
+          if(data.weatherText){document.getElementById("isiCuaca").textContent=data.weatherText;tandai("panelCuaca");}
+          // Pet
+          if(data.petText){document.getElementById("isiPet").textContent=data.petText;tandai("panelPet");}
+          // ✅ Pemain
+          if(data.playerText){document.getElementById("isiPemain").textContent=data.playerText;tandai("panelPemain");}
+          // ✅ Chat
+          if(data.chatText){document.getElementById("isiChat").textContent=data.chatText;tandai("panelChat");}
 
-          // ✅ TAMPILKAN PET DI PETA
-          if (data.petText) {
-            document.getElementById("isiPet").textContent = data.petText;
-            tandai("panelPet");
-          }
-
-          // --- 🎒 TAMPILKAN BARANG SATU PER SATU ---
-          let htmlBarang = "";
-          simpan.barang = {};
-          if (data.barang && Object.keys(data.barang).length>0) {
-            const urut = Object.entries(data.barang).sort((a,b)=>b[1]-a[1]);
-            for (const [nama, jml] of urut) {
-              const hasil = cekPerubahan(nama, jml, "barang");
-              htmlBarang += `<div class="mb-2 relative baris-masuk">• ${nama} x${hasil.teks}</div>`;
+          // Barang
+          let htmlBarang="";
+          if(data.barang&&Object.keys(data.barang).length>0){
+            const urut=Object.entries(data.barang).sort((a,b)=>b[1]-a[1]);
+            for(const [n,j] of urut){
+              const h=cekPerubahan(n,j,"barang");
+              htmlBarang+=`<div class="mb-1">• ${n} × ${h.teks}</div>`;
             }
-          } else htmlBarang = "<span class='text-slate-500'>— Kosong —</span>";
-
-          // --- 📜 MASUKKAN KE RIWAYAT: PANEN BARU + PENJUALAN ---
-          const sekarang = new Date().toLocaleTimeString("id-ID");
-
-          if (data.dipanenBaru && Object.keys(data.dipanenBaru).length>0) {
-            for (const [nama, jml] of Object.entries(data.dipanenBaru)) {
-              simpan.berat[nama] = (simpan.berat[nama]||0)+jml;
-              simpan.riwayat.push({
-                kelas:"text-emerald-400",
-                waktu:sekarang,
-                teks:`🌾 <b>Panen:</b> ${nama} → +${jml}`
-              });
-            }
-          }
-          if (data.terjual && Object.keys(data.terjual).length>0) {
-            for (const [nama, jml] of Object.entries(data.terjual)) {
-              simpan.riwayat.push({
-                kelas:"text-red-400",
-                waktu:sekarang,
-                teks:`💸 <b>Terjual:</b> ${nama} → -${jml}`
-              });
-            }
-          }
-
-          if (simpan.riwayat.length > MAKS_LOG) simpan.riwayat = simpan.riwayat.slice(-MAKS_LOG);
-
-          document.getElementById("isiBarang").innerHTML = htmlBarang;
+          }else htmlBarang="<span class='text-slate-500'>— Kosong —</span>";
+          document.getElementById("isiBarang").innerHTML=htmlBarang;
           tandai("panelBarang");
-          setTimeout(()=>document.getElementById("isiBarang").scrollTop=9999,50);
 
-          let htmlLog = "";
-          simpan.riwayat.forEach((itm, i) => {
-            const baru = i === simpan.riwayat.length - 1 ? "baris-masuk" : "";
-            htmlLog += `<div class="py-2 border-b border-slate-700/50 ${itm.kelas} ${baru}">
-              <span class="text-slate-500 text-xs">${itm.waktu}</span> ${itm.teks}
-            </div>`;
+          // Riwayat Panen/Jual
+          const sekarang=new Date().toLocaleTimeString("id-ID");
+          if(data.baruPanen&&Object.keys(data.baruPanen).length>0){
+            for(const [n,j] of Object.entries(data.baruPanen)){
+              simpan.riwayat.push({kelas:"text-green-400",waktu:sekarang,teks:`🌾 Panen: ${n} +${j}`});
+            }
+          }
+          if(data.terjual&&Object.keys(data.terjual).length>0){
+            for(const [n,j] of Object.entries(data.terjual)){
+              simpan.riwayat.push({kelas:"text-red-400",waktu:sekarang,teks:`💸 Jual: ${n} -${j}`});
+            }
+          }
+          if(simpan.riwayat.length>MAKS_LOG)simpan.riwayat=simpan.riwayat.slice(-MAKS_LOG);
+
+          let htmlLog="";
+          simpan.riwayat.forEach((itm,i)=>{
+            const baru=i===simpan.riwayat.length-1?"baris-masuk":"";
+            htmlLog+=`<div class="py-1 border-b border-slate-700/50 ${itm.kelas} ${baru}"><span class="text-slate-500 text-xs">${itm.waktu}</span> ${itm.teks}</div>`;
           });
-          document.getElementById("isiLog").innerHTML = htmlLog;
+          document.getElementById("isiLog").innerHTML=htmlLog;
           tandai("panelLog");
-          setTimeout(()=>document.getElementById("isiLog").scrollTop=9999,50);
         }
-
-      } catch (e) {
-        document.getElementById("isiBarang").innerHTML = '<span class="text-red-400">❌ Terputus</span>';
+      }catch(e){
+        document.getElementById("isiBarang").innerHTML='<span class="text-red-400">❌ Terputus</span>';
       }
     }
 
     muatData();
-    setInterval(muatData, 2000);
+    setInterval(muatData,2000);
   </script>
 </body>
 </html>
