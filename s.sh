@@ -63,7 +63,11 @@ class Peladen(BaseHTTPRequestHandler):
         elif self.path == "/api/webhook":
             try:
                 with open("datagag.json", "r", encoding="utf-8") as f:
-                    raw = json.load(f)
+                    isi = f.read()
+                # Fix: point.lua tidak escape \n di dalam string JSON
+                # jadi kita bersihkan dulu sebelum parse
+                isi = isi.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
+                raw = json.loads(isi)
                 # Baca chat dari file terpisah
                 chat = ""
                 try:
@@ -144,6 +148,10 @@ if __name__ == "__main__":
     print("✅ Peladen siap di port 8080")
     HTTPServer(("0.0.0.0", 8080), Peladen).serve_forever()
 END_PY
+
+# Matikan proses lama kalau masih jalan di port 8080
+pkill -f server_api.py 2>/dev/null
+sleep 1
 
 # Jalankan server
 python3 server_api.py &
