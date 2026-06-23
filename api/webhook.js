@@ -1,35 +1,36 @@
-// Simpan data terakhir di memori (cocok untuk uji coba; akan kosong saat layanan dimulai ulang)
+// Simpan data terakhir di memori
 let dataTerakhir = {
-  waktu: "Belum ada data masuk",
-  isi: "-"
+  waktu: "Belum ada data",
+  pengirim: "-",
+  konten: ""
 };
 
 module.exports = async (req, res) => {
-  // Izinkan akses dari mana saja
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // ✅ Saat ada kiriman data (POST) → simpan sebagai data terbaru
+  // ✅ Saat TERIMA dari Termux
   if (req.method === "POST") {
     try {
       const masuk = req.body || {};
       dataTerakhir = {
-        waktu: new Date().toLocaleString("id-ID", {timeZone: "Asia/Jakarta"}),
-        isi: masuk
+        waktu: masuk.waktu || new Date().toLocaleString("id-ID", {timeZone: "Asia/Jakarta"}),
+        pengirim: masuk.pengirim || "Tidak diketahui",
+        konten: masuk.konten || ""
       };
-      return res.status(200).json({pesan: "Data diterima", data: dataTerakhir});
+      return res.status(200).json({pesan:"Diterima", ...dataTerakhir});
     } catch (e) {
-      return res.status(400).json({pesan: "Gagal membaca data"});
+      return res.status(400).json({pesan:"Gagal baca kiriman"});
     }
   }
 
-  // ✅ Saat halaman minta baca data (GET) → kirim yang terbaru
+  // ✅ Saat DIBACA oleh halaman web
   if (req.method === "GET") {
     return res.status(200).json(dataTerakhir);
   }
 
-  res.status(405).json({pesan: "Metode tidak diizinkan"});
+  res.status(405).json({pesan:"Metode tidak diizinkan"});
 };
