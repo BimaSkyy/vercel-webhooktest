@@ -1,5 +1,5 @@
 -- ============================================================
--- MONITOR DATA + KIRIM LANGSUNG KE VERCEL
+-- MONITOR DATA KHUSUS REDFINGER: TANPA HTTP, LEWAT BERKAS
 -- ============================================================
 
 local folderPath = "DataFarm"
@@ -7,8 +7,6 @@ local fileName = "datagag.json"
 local fullPath = folderPath .. "/" .. fileName
 local fileRelog = folderPath .. "/relog.txt"
 local fileRelogAccept = folderPath .. "/relogaccept.txt"
-local VERCEL_URL = "https://vercel-webhooktest.vercel.app/api/webhook"
-local VERCEL_RELOG = "https://vercel-webhooktest.vercel.app/api/relog"
 
 if not isfolder(folderPath) then makefolder(folderPath) end
 
@@ -42,21 +40,8 @@ local function tabelKeJson(tbl)
     return "{"..table.concat(bagian,",").."}"
 end
 
--- ✅ FUNGSI: KIRIM DATA LANGSUNG KE VERCEL
-local function kirimKeVercel(isiJson)
-    pcall(function()
-        local http = game:GetService("HttpService")
-        local data = http:JSONEncode({
-            sumber = "Redfinger_Roblox",
-            waktu_kirim = os.date("%H:%M:%S"),
-            data = http:JSONDecode(isiJson)
-        })
-        http:PostAsync(VERCEL_URL, data, Enum.HttpContentType.ApplicationJson)
-    end)
-end
-
 -- ============================================================
--- AMBIL DATA & DETEKSI PERUBAHAN
+-- AMBIL DATA & BANDINGKAN
 -- ============================================================
 
 local dataSebelum = ""
@@ -82,7 +67,7 @@ local function ambilDanTulis()
         end
     end)
 
-    -- Ambil semua barang di tas
+    -- Ambil barang di tas
     local lokasi = {plr:FindFirstChildOfClass("Backpack")}
     for _,tempat in lokasi do
         if tempat then
@@ -126,28 +111,29 @@ local function ambilDanTulis()
         totalBerat=totalBerat, totalBeratFormat=formatAngka(totalBerat), totalItem=totalSemua
     }
 
+    -- Tulis ke berkas → Termux yang akan kirim
     local teksAkhir = tabelKeJson(data)
     if teksAkhir ~= dataSebelum then
         dataSebelum = teksAkhir
-        writefile(fullPath, teksAkhir) -- Tetap simpan lokal
-        kirimKeVercel(teksAkhir)      -- ✅ Kirim langsung dari Roblox
+        writefile(fullPath, teksAkhir)
+        game.StarterGui:SetCore("SendNotification",{Title="✅ Disimpan",Text="Menunggu kirim",Duration=1})
     end
 end
 
 -- ============================================================
--- PEMANTAU PERINTAH RELOG DARI WEB
+-- PANTAN PERINTAH RELOG DARI TERMUX
 -- ============================================================
 
 task.spawn(function()
     while true do
         task.wait(1)
-        -- Cek perintah dari berkas lokal (dibuat/dibaca web)
         if isfile(fileRelog) then
             local perintah = readfile(fileRelog) or ""
             if perintah:lower() == "true" then
-                print("[⚠️] PERINTAH RELOG DITERIMA — JALANKAN")
-                writefile(fileRelogAccept, "true") -- Konfirmasi
-                -- Lakukan relog
+                print("[⚠️] PERINTAH RELOG DITERIMA DARI BERKAS")
+                -- Balas konfirmasi ke Termux
+                writefile(fileRelogAccept, "true")
+                -- Jalankan pindah server
                 pcall(function()
                     game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
                 end)
@@ -163,6 +149,6 @@ end)
 -- MULAI BERJALAN
 -- ============================================================
 
-print("[✅] Kirim langsung dari Roblox — Tidak pakai Termux kirim data")
+print("[✅] Mode RedFinger: Lewat Berkas Lokal")
 ambilDanTulis()
 task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
