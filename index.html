@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penerima Webhook</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700">
+    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">📡 Data Terima Webhook</h1>
+
+    <div class="mb-4">
+      <span class="text-slate-400">Waktu Terima:</span>
+      <div id="waktu" class="font-semibold text-lg">—</div>
+    </div>
+
+    <div class="mt-6">
+      <span class="text-slate-400">Isi Data:</span>
+      <pre id="isiData" class="mt-2 bg-slate-900 p-4 rounded-xl overflow-x-auto text-sm text-emerald-300"></pre>
+    </div>
+
+    <p class="text-center text-slate-500 text-sm mt-6">Diperbarui otomatis setiap 3 detik</p>
+  </div>
+
+  <script>
+    // Ambil data dari API & tampilkan
+    async function ambilData() {
+      try {
+        const res = await fetch("/api/webhook");
+        const data = await res.json();
+        document.getElementById("waktu").textContent = data.waktu;
+        document.getElementById("isiData").textContent = JSON.stringify(data.isi, null, 2);
+      } catch (err) {
+        document.getElementById("isiData").textContent = "❌ Gagal terhubung ke server";
+      }
+    }
+
+    ambilData();         // Jalankan pertama kali
+    setInterval(ambilData, 3000); // Perbarui otomatis
+  </script>
+</body>
+</html>
