@@ -26,6 +26,7 @@
 
     .tinggi-panjang { max-height: 400px; overflow-y: auto; scroll-behavior: smooth; }
     .tinggi-log { max-height: 260px; overflow-y: auto; scroll-behavior: smooth; }
+    .tinggi-info { max-height: 220px; overflow-y: auto; scroll-behavior: smooth; }
 
     .tombol-relog { transition: all 0.2s ease; }
     .tombol-relog:disabled { opacity:0.5; cursor:not-allowed; }
@@ -72,6 +73,22 @@
       </div>
     </div>
 
+    <!-- ✅ BARU: CUACA & RESTOCK -->
+    <div id="panelCuaca" class="panel p-4 mb-4">
+      <h3 class="text-sky-400 font-semibold mb-2">🌤 Cuaca & Waktu Restock</h3>
+      <div id="isiCuaca" class="tinggi-info text-sm pl-3 whitespace-pre-line text-slate-200">
+        <span class="text-amber-400">Menunggu data...</span>
+      </div>
+    </div>
+
+    <!-- ✅ BARU: PET LIAR DI PETA -->
+    <div id="panelPet" class="panel p-4 mb-4">
+      <h3 class="text-sky-400 font-semibold mb-2">🐾 Pet di Peta</h3>
+      <div id="isiPet" class="tinggi-info text-sm pl-3 text-emerald-300">
+        <span class="text-slate-500">— Belum terdeteksi —</span>
+      </div>
+    </div>
+
     <!-- 🎒 BARANG DI TAS - MUNCUL BARIS DEMI BARIS -->
     <div id="panelBarang" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🎒 Barang di Tas</h3>
@@ -93,7 +110,7 @@
 
   <script>
     let simpan = { uang:"", barang:{}, berat:{}, riwayat:[] };
-    const MAKS_LOG = 20; // Maksimal riwayat
+    const MAKS_LOG = 20;
     let teksLama = "";
     let sedangRelog = false;
 
@@ -108,7 +125,6 @@
       btnRelog.className = "tombol-relog tombol-proses px-4 py-2 rounded-xl font-semibold shadow-lg";
       statusRelog.textContent = "Mengirim perintah...";
 
-      // Kirim perintah ke titik kendali
       await fetch("/api/relog", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
@@ -176,6 +192,18 @@
           document.getElementById("nilaiBerat").textContent = `${data.totalBeratFormat||"0"} KG`;
           document.getElementById("nilaiJumlah").textContent = `${data.totalItem||0} buah`;
 
+          // ✅ TAMPILKAN CUACA & RESTOCK
+          if (data.weatherRestockText) {
+            document.getElementById("isiCuaca").textContent = data.weatherRestockText;
+            tandai("panelCuaca");
+          }
+
+          // ✅ TAMPILKAN PET DI PETA
+          if (data.petText) {
+            document.getElementById("isiPet").textContent = data.petText;
+            tandai("panelPet");
+          }
+
           // --- 🎒 TAMPILKAN BARANG SATU PER SATU ---
           let htmlBarang = "";
           simpan.barang = {};
@@ -190,7 +218,6 @@
           // --- 📜 MASUKKAN KE RIWAYAT: PANEN BARU + PENJUALAN ---
           const sekarang = new Date().toLocaleTimeString("id-ID");
 
-          // 1. Tambah baris PANEN BARU
           if (data.dipanenBaru && Object.keys(data.dipanenBaru).length>0) {
             for (const [nama, jml] of Object.entries(data.dipanenBaru)) {
               simpan.berat[nama] = (simpan.berat[nama]||0)+jml;
@@ -201,7 +228,6 @@
               });
             }
           }
-          // 2. Tambah baris PENJUALAN
           if (data.terjual && Object.keys(data.terjual).length>0) {
             for (const [nama, jml] of Object.entries(data.terjual)) {
               simpan.riwayat.push({
@@ -212,15 +238,12 @@
             }
           }
 
-          // Simpan maksimal 20 baris
           if (simpan.riwayat.length > MAKS_LOG) simpan.riwayat = simpan.riwayat.slice(-MAKS_LOG);
 
-          // Tampilkan barang
           document.getElementById("isiBarang").innerHTML = htmlBarang;
           tandai("panelBarang");
           setTimeout(()=>document.getElementById("isiBarang").scrollTop=9999,50);
 
-          // Tampilkan riwayat gabungan
           let htmlLog = "";
           simpan.riwayat.forEach((itm, i) => {
             const baru = i === simpan.riwayat.length - 1 ? "baris-masuk" : "";
