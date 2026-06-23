@@ -1,5 +1,5 @@
 -- ============================================================
--- MONITOR DATA KHUSUS REDFINGER: TANPA HTTP, LEWAT BERKAS
+-- MONITOR DATA KHUSUS REDFINGER: PASTI DETEKSI RELOG
 -- ============================================================
 
 local folderPath = "DataFarm"
@@ -116,28 +116,40 @@ local function ambilDanTulis()
     if teksAkhir ~= dataSebelum then
         dataSebelum = teksAkhir
         writefile(fullPath, teksAkhir)
+        -- Notifikasi
         game.StarterGui:SetCore("SendNotification",{Title="✅ Disimpan",Text="Menunggu kirim",Duration=1})
     end
 end
 
 -- ============================================================
--- PANTAN PERINTAH RELOG DARI TERMUX
+-- ✅ PEMANTAU RELOG DIPERKUAT: PASTI BACA & JALANKAN
 -- ============================================================
 
 task.spawn(function()
     while true do
-        task.wait(1)
+        task.wait(0.5) -- ✅ Cek LEBIH KERAP: setiap 0.5 detik
         if isfile(fileRelog) then
-            local perintah = readfile(fileRelog) or ""
-            if perintah:lower() == "true" then
-                print("[⚠️] PERINTAH RELOG DITERIMA DARI BERKAS")
-                -- Balas konfirmasi ke Termux
+            -- ✅ Baca lalu buang SEMUA spasi/baris kosong/karakter tersisa
+            local isiMentah = readfile(fileRelog) or ""
+            local isiBersih = isiMentah:gsub("%s+", ""):lower() -- hapus spasi, ganti jadi huruf kecil
+
+            if isiBersih == "true" then
+                print("[⚠️] ✅ PERINTAH RELOG DITEMUKAN & DIJALANKAN")
+                game.StarterGui:SetCore("SendNotification",{Title="🔄 RELOG",Text="Sedang pindah server...",Duration=3})
+
+                -- ✅ Tulis konfirmasi dulu supaya Termux tahu
                 writefile(fileRelogAccept, "true")
-                -- Jalankan pindah server
+
+                -- ✅ Jalankan pindah server
                 pcall(function()
-                    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(
+                        game.PlaceId,
+                        game.JobId,
+                        game.Players.LocalPlayer
+                    )
                 end)
-                -- Bersihkan
+
+                -- ✅ Bersihkan berkas SEKARANG juga
                 writefile(fileRelog, "")
                 writefile(fileRelogAccept, "")
             end
@@ -149,6 +161,6 @@ end)
 -- MULAI BERJALAN
 -- ============================================================
 
-print("[✅] Mode RedFinger: Lewat Berkas Lokal")
+print("[✅] Mode RedFinger: Cek relog tiap 0.5 detik")
 ambilDanTulis()
 task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
