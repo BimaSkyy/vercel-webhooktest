@@ -1,3 +1,4 @@
+cat > s.sh <<'FULL_SCRIPT'
 #!/data/data/com.termux/files/usr/bin/sh
 
 # 📂 Lokasi berkas di dalam RedFinger
@@ -131,4 +132,42 @@ class PengendaliPermintaan(BaseHTTPRequestHandler):
                     f.write(teks_pesan)
                 self._kirim_respons({"ok": True})
             except Exception as e:
-                
+                self._kirim_respons({"ok": False, "error": str(e)}, kode=500)
+
+        else:
+            self._kirim_respons({"pesan": "tidak ada layanan ini"}, kode=404)
+
+if __name__ == "__main__":
+    print("✅ Peladen API siap di port 8080")
+    HTTPServer(("0.0.0.0", 8080), PengendaliPermintaan).serve_forever()
+END_PYTHON
+
+# Jalankan peladen buatan sendiri
+python3 server_api.py &
+PID_SERVER=$!
+
+# Jalankan terowongan Cloudflare
+echo "🌐 Menghubungkan terowongan Cloudflare..."
+cloudflared tunnel --url http://localhost:8080 &
+PID_TEROWONGAN=$!
+
+# Pengawas perintah relog
+echo "🔍 Memantau perintah relog & berkas..."
+while true; do
+    if [ -s "$RELOG_FILE" ] && [ "$(cat "$RELOG_FILE" | tr -d '[:space:]')" = "true" ]; then
+        echo "[🔄] Perintah Relog diterima"
+        while true; do
+            sleep 0.5
+            if [ -f "$RELOG_ACCEPT" ] && [ "$(cat "$RELOG_ACCEPT" | tr -d '[:space:]')" = "true" ]; then
+                echo "[✅] Relog selesai"
+                echo "" > "$RELOG_FILE"
+                echo "" > "$RELOG_ACCEPT"
+                break
+            fi
+        done
+    fi
+    sleep 2
+done
+
+trap "echo '🛑 Menghentikan semua layanan...'; kill $PID_SERVER $PID_TEROWONGAN 2>/dev/null; exit 0" INT TERM EXIT
+FULL_SCRIPT
