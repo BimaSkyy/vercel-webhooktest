@@ -279,7 +279,7 @@ local function ambilDanTulis()
         weatherText = table.concat(teksCuacaRestock,"\n"),
         petText = teksPet,
         playerText = table.concat(daftarPemain,"\n"),
-        chatText = table.concat(riwayatChat, "\n")
+        chatText = "" -- Dibaca dari berkas kirim_chat.txt oleh server
     }
 
     -- ✅ Cukup tulis ke berkas lokal, TIDAK PERLU KIRIM KE ALAMAT LUAR
@@ -287,6 +287,10 @@ local function ambilDanTulis()
     if teksAkhir ~= dataSebelum then
         dataSebelum = teksAkhir
         writefile(fullPath, teksAkhir)
+        -- Notifikasi sesekali saja
+        if math.random(1,5)==1 then
+            game.StarterGui:SetCore("SendNotification",{Title="✅ Data Diperbarui",Duration=1})
+        end
     end
 end
 
@@ -301,6 +305,7 @@ task.spawn(function()
             local isiMentah = readfile(fileRelog) or ""
             local isiBersih = isiMentah:gsub("%s+", ""):lower()
             if isiBersih == "true" then
+                print("[⚠️] RELOG: Perintah diterima")
                 -- Tulis konfirmasi supaya server tahu sudah diterima
                 writefile(fileRelogAccept, "true")
                 -- Bersihkan perintah
@@ -316,45 +321,10 @@ task.spawn(function()
     end
 end)
 
-
--- ============================================================
--- CHAT: KIRIM PESAN DARI WEB → GAME & TANGKAP CHAT GAME
--- ============================================================
-
-local fileKirimChat = folderPath .. "/kirim_chat.txt"
-local riwayatChat = {}
-local MAKS_CHAT = 15
-
-pcall(function()
-    local TCS = game:GetService("TextChatService")
-    TCS.MessageReceived:Connect(function(msg)
-        local pengirim = msg.TextSource and msg.TextSource.Name or "?"
-        local teks = msg.Text or ""
-        if teks == "" then return end
-        table.insert(riwayatChat, pengirim .. ": " .. teks)
-        if #riwayatChat > MAKS_CHAT then table.remove(riwayatChat, 1) end
-    end)
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        pcall(function()
-            if not isfile(fileKirimChat) then return end
-            local isi = readfile(fileKirimChat):gsub("%s+$", "")
-            if isi == "" then return end
-            writefile(fileKirimChat, "")
-            local TCS = game:GetService("TextChatService")
-            local channels = TCS:FindFirstChild("TextChannels")
-            local ch = channels and (channels:FindFirstChild("RBXGeneral") or channels:GetChildren()[1])
-            if ch then ch:SendAsync(isi) end
-        end)
-    end
-end)
-
 -- ============================================================
 -- MULAI BERJALAN
 -- ============================================================
 
+print("[✅] Siap: Hanya baca/tulis berkas lokal — TANPA alamat berubah-ubah lagi")
 ambilDanTulis()
 task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
