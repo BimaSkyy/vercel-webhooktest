@@ -73,15 +73,15 @@
       </div>
     </div>
 
-    <!-- ✅ BARU: CUACA & RESTOCK -->
+    <!-- ✅ CUACA & RESTOCK - DIPERBAIKI: BARIS BARU TERBACA & JARAK RAPI -->
     <div id="panelCuaca" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🌤 Cuaca & Waktu Restock</h3>
-      <div id="isiCuaca" class="tinggi-info text-sm pl-3 whitespace-pre-line text-slate-200">
+      <div id="isiCuaca" class="tinggi-info text-sm pl-3 whitespace-pre-line leading-relaxed text-slate-200">
         <span class="text-amber-400">Menunggu data...</span>
       </div>
     </div>
 
-    <!-- ✅ BARU: PET LIAR DI PETA -->
+    <!-- ✅ PET LIAR DI PETA -->
     <div id="panelPet" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🐾 Pet di Peta</h3>
       <div id="isiPet" class="tinggi-info text-sm pl-3 text-emerald-300">
@@ -192,7 +192,7 @@
           document.getElementById("nilaiBerat").textContent = `${data.totalBeratFormat||"0"} KG`;
           document.getElementById("nilaiJumlah").textContent = `${data.totalItem||0} buah`;
 
-          // ✅ TAMPILKAN CUACA & RESTOCK
+          // ✅ TAMPILKAN CUACA & RESTOCK - BACA BARIS DENGAN BENAR
           if (data.weatherRestockText) {
             document.getElementById("isiCuaca").textContent = data.weatherRestockText;
             tandai("panelCuaca");
