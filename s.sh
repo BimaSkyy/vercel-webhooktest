@@ -1,16 +1,13 @@
-cat > s.sh <<'FULL_SCRIPT'
 #!/data/data/com.termux/files/usr/bin/sh
+# ✅ SUDAH DI LOKASI BENAR: /storage/emulated/0/Delta/Workspace/DataFarm/
 
-# 📂 Lokasi berkas di dalam RedFinger
+# 📂 Semua berkas ada di sini
 FILE="./datagag.json"
 RELOG_FILE="./relog.txt"
 RELOG_ACCEPT="./relogaccept.txt"
 CHAT_CMD="./kirim_chat.txt"
 
-# 🔗 Alamat terowongan yang sedang dipakai
-ALAMAT_CLOUDFLARE="https://adipex-missile-uncle-postcards.trycloudflare.com"
-
-# Pasang alat yang dibutuhkan jika belum ada
+# Pasang alat kalau belum ada
 if ! command -v python3 &> /dev/null; then
     pkg update && pkg install python -y
 fi
@@ -18,27 +15,24 @@ if ! command -v cloudflared &> /dev/null; then
     pkg install cloudflared -y
 fi
 
-# Siapkan berkas awal jika belum ada
+# Siapkan berkas kosong kalau belum ada
 [ ! -f "$RELOG_FILE" ] && echo "" > "$RELOG_FILE"
 [ ! -f "$RELOG_ACCEPT" ] && echo "" > "$RELOG_ACCEPT"
 [ ! -f "$CHAT_CMD" ] && echo "" > "$CHAT_CMD"
 
 echo "=========================================="
-echo "🚀 SERVER PEMANTAU LENGKAP DI REDFINGER"
-echo "📍 Lokasi: $(pwd)"
-echo "🔗 Alamat Publik: $ALAMAT_CLOUDFLARE"
+echo "🚀 SERVER DI LOKASI: $(pwd)"
 echo "=========================================="
 
-# 🛠️ Buat program peladen kustom yang MENGERTI /api/... & membaca berkas lokal
-cat > server_api.py <<'END_PYTHON'
+# 🛠️ Buat peladen yang mengerti /api/... & cocok dengan datamu
+cat > server_api.py <<'END_PY'
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import json
-import os
+import json, os
 
-class PengendaliPermintaan(BaseHTTPRequestHandler):
-    def _kirim_respons(self, isi, tipe_konten="application/json", kode=200):
+class Peladen(BaseHTTPRequestHandler):
+    def _balas(self, isi, tipe="application/json", kode=200):
         self.send_response(kode)
-        self.send_header("Content-Type", tipe_konten)
+        self.send_header("Content-Type", tipe)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
@@ -50,116 +44,112 @@ class PengendaliPermintaan(BaseHTTPRequestHandler):
             self.wfile.write(str(isi).encode("utf-8"))
 
     def do_OPTIONS(self):
-        self._kirim_respons({})
+        self._balas({})
 
     def do_GET(self):
+        jalur = self.path.lstrip("/")
+        # Halaman utama
         if self.path == "/":
             try:
-                with open("index.html", "rb") as f:
-                    self._kirim_respons(f.read(), "text/html")
+                with open("index.html","rb") as f:
+                    self._balas(f.read(), "text/html")
             except Exception as e:
-                self._kirim_respons({"pesan": "index.html tidak ditemukan", "error": str(e)}, kode=404)
+                self._balas({"pesan":"index.html tidak ada"},404)
 
+        # ✅ SESUAIKAN DENGAN NAMA DI HALAMAN WEB & DATA KAMU
         elif self.path == "/api/webhook":
             try:
-                with open("datagag.json", "r", encoding="utf-8") as f:
-                    konten = f.read()
-                    data = json.loads(konten)
-                    self._kirim_respons(data)
+                with open("datagag.json","r",encoding="utf-8") as f:
+                    data = json.load(f)
+                    # Format agar cocok persis dengan yang dibaca index.html
+                    keluar = {
+                        "waktu": data.get("waktu", ""),
+                        "uangTeks": data.get("uangTeks", "0"),
+                        "beratTeks": data.get("beratTeks", "0"),
+                        "jumlahTeks": data.get("jumlahTeks", "0"),
+                        "totalItem": data.get("totalItem", 0),
+                        "weatherText": data.get("weatherText", ""),
+                        "petText": data.get("petText", ""),
+                        "playerText": data.get("playerText", ""),
+                        "chatText": data.get("chatText", ""),
+                        "barang": data.get("barang", {}),
+                        "baruPanen": data.get("dipanenBaru", {}),
+                        "terjual": data.get("terjual", {})
+                    }
+                    self._balas(keluar)
             except Exception as e:
-                self._kirim_respons({"sumber":"server", "data":{}, "pesan":"belum ada data"})
+                self._balas({"pesan":"belum ada data"})
 
         elif self.path == "/api/relog":
-            try:
-                with open("relog.txt", "r", encoding="utf-8") as f:
-                    nilai = f.read().strip()
-            except:
-                nilai = ""
-            self._kirim_respons({"perintah": "true" if nilai == "true" else "false"})
+            n = ""
+            try: n = open("relog.txt","r").read().strip()
+            except: pass
+            self._balas({"perintah":"true" if n=="true" else "false"})
 
         elif self.path == "/api/kirimchat":
-            try:
-                with open("kirim_chat.txt", "r", encoding="utf-8") as f:
-                    teks = f.read().strip()
-            except:
-                teks = ""
-            self._kirim_respons({"pesan": teks})
+            n = ""
+            try: n = open("kirim_chat.txt","r").read().strip()
+            except: pass
+            self._balas({"pesan":n})
 
-        elif os.path.exists(self.path.lstrip("/")):
-            lokasi = self.path.lstrip("/")
+        # Berkas lain di folder ini
+        elif os.path.exists(jalur):
             jenis = "text/plain"
-            if lokasi.endswith(".css"): jenis = "text/css"
-            elif lokasi.endswith(".js"): jenis = "text/javascript"
-            elif lokasi.endswith(".json"): jenis = "application/json"
+            if jalur.endswith(".css"): jenis="text/css"
+            elif jalur.endswith(".js"): jenis="text/javascript"
+            elif jalur.endswith(".json"): jenis="application/json"
             try:
-                with open(lokasi, "rb") as f:
-                    self._kirim_respons(f.read(), jenis)
+                with open(jalur,"rb") as f:
+                    self._balas(f.read(), jenis)
             except:
-                self._kirim_respons({"pesan": "gagal baca berkas"}, kode=404)
-
+                self._balas({"pesan":"tidak ada"},404)
         else:
-            self._kirim_respons({"pesan": "alamat tidak ditemukan"}, kode=404)
+            self._balas({"pesan":"tidak ditemukan"},404)
 
     def do_POST(self):
-        panjang = int(self.headers.get("Content-Length", "0"))
-        data_baku = self.rfile.read(panjang).decode("utf-8")
-        try:
-            data = json.loads(data_baku)
-        except:
-            data = {}
-
+        panjang = int(self.headers.get("Content-Length","0"))
+        data = json.loads(self.rfile.read(panjang).decode("utf-8","ignore") or "{}")
         if self.path == "/api/webhook":
             try:
-                with open("datagag.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
-                self._kirim_respons({"ok": True})
+                with open("datagag.json","w",encoding="utf-8") as f:
+                    json.dump(data,f,indent=2)
+                self._balas({"ok":True})
             except Exception as e:
-                self._kirim_respons({"ok": False, "error": str(e)}, kode=500)
-
+                self._balas({"ok":False,"err":str(e)},500)
         elif self.path == "/api/relog":
-            nilai = "true" if data.get("perintah") == "true" else ""
-            try:
-                with open("relog.txt", "w") as f:
-                    f.write(nilai)
-                self._kirim_respons({"ok": True})
-            except Exception as e:
-                self._kirim_respons({"ok": False, "error": str(e)}, kode=500)
-
+            with open("relog.txt","w") as f:
+                f.write("true" if data.get("perintah")=="true" else "")
+            self._balas({"ok":True})
         elif self.path == "/api/kirimchat":
-            teks_pesan = data.get("pesan", "").strip()
-            try:
-                with open("kirim_chat.txt", "w") as f:
-                    f.write(teks_pesan)
-                self._kirim_respons({"ok": True})
-            except Exception as e:
-                self._kirim_respons({"ok": False, "error": str(e)}, kode=500)
-
+            with open("kirim_chat.txt","w") as f:
+                f.write(data.get("pesan","").strip())
+            self._balas({"ok":True})
         else:
-            self._kirim_respons({"pesan": "tidak ada layanan ini"}, kode=404)
+            self._balas({"pesan":"tidak ada"},404)
 
 if __name__ == "__main__":
-    print("✅ Peladen API siap di port 8080")
-    HTTPServer(("0.0.0.0", 8080), PengendaliPermintaan).serve_forever()
+    print("✅ Peladen siap — cocok dengan struktur data kamu")
+    HTTPServer(("0.0.0.0",8080),Peladen).serve_forever()
 END_PYTHON
 
-# Jalankan peladen buatan sendiri
+# Jalankan peladen
 python3 server_api.py &
-PID_SERVER=$!
+PID_SRV=$!
 
 # Jalankan terowongan Cloudflare
-echo "🌐 Menghubungkan terowongan Cloudflare..."
+echo "🌐 Menghubungkan akses luar..."
 cloudflared tunnel --url http://localhost:8080 &
-PID_TEROWONGAN=$!
+PID_TUN=$!
 
-# Pengawas perintah relog
-echo "🔍 Memantau perintah relog & berkas..."
+# 🔄 Pengawas Relog — SAMA PERSIS DENGAN KERJA LAMA
+echo "🔍 Pantau perintah Relog berjalan..."
 while true; do
-    if [ -s "$RELOG_FILE" ] && [ "$(cat "$RELOG_FILE" | tr -d '[:space:]')" = "true" ]; then
+    if [ -s "$RELOG_FILE" ] && [ "$(tr -d '[:space:]' < "$RELOG_FILE")" = "true" ]; then
         echo "[🔄] Perintah Relog diterima"
         while true; do
             sleep 0.5
-            if [ -f "$RELOG_ACCEPT" ] && [ "$(cat "$RELOG_ACCEPT" | tr -d '[:space:]')" = "true" ]; then
-                echo "[✅] Relog selesai"
+            if [ -f "$RELOG_ACCEPT" ] && [ "$(tr -d '[:space:]' < "$RELOG_ACCEPT")" = "true" ]; then
+                echo "[✅] Relog selesai — bersihkan status"
                 echo "" > "$RELOG_FILE"
                 echo "" > "$RELOG_ACCEPT"
                 break
@@ -169,5 +159,5 @@ while true; do
     sleep 2
 done
 
-trap "echo '🛑 Menghentikan semua layanan...'; kill $PID_SERVER $PID_TEROWONGAN 2>/dev/null; exit 0" INT TERM EXIT
-FULL_SCRIPT
+# Hentikan semua kalau ditutup
+trap "echo '🛑 Berhenti...'; kill $PID_SRV $PID_TUN 2>/dev/null; exit" INT TERM EXIT
