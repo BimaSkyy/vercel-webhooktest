@@ -1,5 +1,5 @@
 -- ============================================================
--- MONITOR DATA KHUSUS REDFINGER: PASTI DETEKSI RELOG
+-- MONITOR DATA KHUSUS REDFINGER: PASTI TULIS KONFIRMASI
 -- ============================================================
 
 local folderPath = "DataFarm"
@@ -116,31 +116,34 @@ local function ambilDanTulis()
     if teksAkhir ~= dataSebelum then
         dataSebelum = teksAkhir
         writefile(fullPath, teksAkhir)
-        -- Notifikasi
         game.StarterGui:SetCore("SendNotification",{Title="✅ Disimpan",Text="Menunggu kirim",Duration=1})
     end
 end
 
 -- ============================================================
--- ✅ PEMANTAU RELOG DIPERKUAT: PASTI BACA & JALANKAN
+-- ✅ PEMANTAU RELOG: TULIS KONFIRMASI DULU BARU PINDAH
 -- ============================================================
 
 task.spawn(function()
     while true do
-        task.wait(0.5) -- ✅ Cek LEBIH KERAP: setiap 0.5 detik
+        task.wait(0.5)
         if isfile(fileRelog) then
-            -- ✅ Baca lalu buang SEMUA spasi/baris kosong/karakter tersisa
             local isiMentah = readfile(fileRelog) or ""
-            local isiBersih = isiMentah:gsub("%s+", ""):lower() -- hapus spasi, ganti jadi huruf kecil
+            local isiBersih = isiMentah:gsub("%s+", ""):lower()
 
             if isiBersih == "true" then
-                print("[⚠️] ✅ PERINTAH RELOG DITEMUKAN & DIJALANKAN")
-                game.StarterGui:SetCore("SendNotification",{Title="🔄 RELOG",Text="Sedang pindah server...",Duration=3})
+                print("[⚠️] PERINTAH DITERIMA → MENULIS KONFIRMASI DULU")
 
-                -- ✅ Tulis konfirmasi dulu supaya Termux tahu
+                -- ✅ LANGKAH 1: TULIS KONFIRMASI DULU SEBELUM APA PUN
                 writefile(fileRelogAccept, "true")
+                -- ✅ LANGKAH 2: Bersihkan perintah agar tidak dibaca ulang
+                writefile(fileRelog, "")
 
-                -- ✅ Jalankan pindah server
+                -- ✅ LANGKAH 3: Beri waktu sedikit supaya berkas benar-benar tersimpan
+                task.wait(0.2)
+
+                -- ✅ LANGKAH 4: BARU JALANKAN PINDAH SERVER
+                game.StarterGui:SetCore("SendNotification",{Title="🔄 RELOG",Text="Konfirmasi dikirim",Duration=2})
                 pcall(function()
                     game:GetService("TeleportService"):TeleportToPlaceInstance(
                         game.PlaceId,
@@ -148,10 +151,6 @@ task.spawn(function()
                         game.Players.LocalPlayer
                     )
                 end)
-
-                -- ✅ Bersihkan berkas SEKARANG juga
-                writefile(fileRelog, "")
-                writefile(fileRelogAccept, "")
             end
         end
     end
@@ -161,6 +160,6 @@ end)
 -- MULAI BERJALAN
 -- ============================================================
 
-print("[✅] Mode RedFinger: Cek relog tiap 0.5 detik")
+print("[✅] Perbaikan: Konfirmasi ditulis sebelum pindah server")
 ambilDanTulis()
 task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
