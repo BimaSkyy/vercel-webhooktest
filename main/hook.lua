@@ -1,18 +1,16 @@
 -- ============================================================
--- MONITOR DATA FARM + DETEKSI JUAL/PANEN + SISTEM RELOG
+-- MONITOR DATA + KIRIM LANGSUNG KE VERCEL
 -- ============================================================
 
 local folderPath = "DataFarm"
 local fileName = "datagag.json"
 local fullPath = folderPath .. "/" .. fileName
-
--- ✅ Berkas perintah relog
 local fileRelog = folderPath .. "/relog.txt"
 local fileRelogAccept = folderPath .. "/relogaccept.txt"
+local VERCEL_URL = "https://vercel-webhooktest.vercel.app/api/webhook"
+local VERCEL_RELOG = "https://vercel-webhooktest.vercel.app/api/relog"
 
-if not isfolder(folderPath) then
-    makefolder(folderPath)
-end
+if not isfolder(folderPath) then makefolder(folderPath) end
 
 -- ============================================================
 -- FUNGSI PENDUKUNG
@@ -27,11 +25,6 @@ local function formatAngka(angka)
     elseif abs >= 1e6 then val = angka/1e6; suf = "M"
     elseif abs >= 1e3 then val = angka/1e3; suf = "K" end
     return suf~="" and string.format("%.2f%s",val,suf) or string.format("%.0f",angka)
-end
-
--- ✅ SEKARANG LEBIH SEDERHANA: HANYA AMBIL ALAT DALAM TAS
-local function isFarmingItem(item)
-    return item:IsA("Tool") and not item:FindFirstAncestorWhichIsA("Character")
 end
 
 local function tabelKeJson(tbl)
@@ -49,12 +42,25 @@ local function tabelKeJson(tbl)
     return "{"..table.concat(bagian,",").."}"
 end
 
+-- ✅ FUNGSI: KIRIM DATA LANGSUNG KE VERCEL
+local function kirimKeVercel(isiJson)
+    pcall(function()
+        local http = game:GetService("HttpService")
+        local data = http:JSONEncode({
+            sumber = "Redfinger_Roblox",
+            waktu_kirim = os.date("%H:%M:%S"),
+            data = http:JSONDecode(isiJson)
+        })
+        http:PostAsync(VERCEL_URL, data, Enum.HttpContentType.ApplicationJson)
+    end)
+end
+
 -- ============================================================
--- ✅ FUNGSI UTAMA: AMBIL DAN BANDINGKAN (DETEKSI JUAL & PANEN)
+-- AMBIL DATA & DETEKSI PERUBAHAN
 -- ============================================================
 
 local dataSebelum = ""
-local daftarBeratSebelum = {} -- Simpan daftar barang berat sebelumnya untuk cek jual
+local daftarBeratSebelum = {}
 
 local function ambilDanTulis()
     local plr = game:GetService("Players").LocalPlayer
@@ -63,7 +69,7 @@ local function ambilDanTulis()
     local uang = 0
     local barang = {}
     local hasilPanen = {}
-    local daftarBeratSekarang = {} -- Untuk bandingkan
+    local daftarBeratSekarang = {}
     local totalBerat = 0
     local totalSemua = 0
 
@@ -76,12 +82,12 @@ local function ambilDanTulis()
         end
     end)
 
-    -- Ambil semua barang
+    -- Ambil semua barang di tas
     local lokasi = {plr:FindFirstChildOfClass("Backpack")}
     for _,tempat in lokasi do
         if tempat then
             for _,item in tempat:GetChildren() do
-                if isFarmingItem(item) then
+                if item:IsA("Tool") then
                     local nama = item.Name
                     local jumlah = item:GetAttribute("Count") or 1
                     local berat = item:GetAttribute("Weight") or 0
@@ -90,102 +96,62 @@ local function ambilDanTulis()
                     if jumlah <= 0 then continue end
 
                     if berat > 0 then
-                        local namaPenuh = mutasi~="" and mutasi~="None" 
-                            and string.format("%s [%s]", nama, mutasi) or nama
-                        -- Simpan untuk bandingkan jual
+                        local namaPenuh = mutasi~="" and mutasi~="None" and string.format("%s [%s]",nama,mutasi) or nama
                         daftarBeratSekarang[namaPenuh] = jumlah
-                        -- Masuk daftar
-                        if not hasilPanen[namaPenuh] then
-                            hasilPanen[namaPenuh] = {jumlah=0, beratTotal=berat*jumlah}
-                        else
-                            hasilPanen[namaPenuh].jumlah += jumlah
-                            hasilPanen[namaPenuh].beratTotal += berat*jumlah
-                        end
-                        totalBerat += berat * jumlah
+                        if not hasilPanen[namaPenuh] then hasilPanen[namaPenuh]={jumlah=0,beratTotal=berat*jumlah} end
+                        hasilPanen[namaPenuh].jumlah+=jumlah
+                        hasilPanen[namaPenuh].beratTotal+=berat*jumlah
+                        totalBerat+=berat*jumlah
                     else
-                        barang[nama] = (barang[nama] or 0) + jumlah
+                        barang[nama] = (barang[nama] or 0)+jumlah
                     end
-                    totalSemua += jumlah
+                    totalSemua+=jumlah
                 end
             end
         end
     end
 
-    -- ✅ DETEKSI: Barang berat yang ada sebelumnya tapi HILANG = DIJUAL
-    local daftarTerjual = {}
-    for nama, jmlLama in pairs(daftarBeratSebelum) do
-        if not daftarBeratSekarang[nama] then
-            daftarTerjual[nama] = jmlLama -- Semua jumlah hilang = terjual
-        elseif daftarBeratSekarang[nama] < jmlLama then
-            daftarTerjual[nama] = jmlLama - daftarBeratSekarang[nama] -- Sebagian terjual
-        end
-    end
-
-    -- ✅ DETEKSI: Barang berat BARU atau bertambah = HASIL PANEN BARU
-    local daftarBaru = {}
-    for nama, jmlBaru in pairs(daftarBeratSekarang) do
-        local lama = daftarBeratSebelum[nama] or 0
-        if jmlBaru > lama then
-            daftarBaru[nama] = jmlBaru - lama
-        end
-    end
-
-    -- Perbarui catatan untuk cek berikutnya
+    -- Deteksi jual & panen baru
+    local terjual = {}
+    for n,j in pairs(daftarBeratSebelum) do if not daftarBeratSekarang[n] then terjual[n]=j end end
+    local dipanenBaru = {}
+    for n,j in pairs(daftarBeratSekarang) do local l=daftarBeratSebelum[n] or 0 if j>l then dipanenBaru[n]=j-l end end
     daftarBeratSebelum = daftarBeratSekarang
 
-    -- ✅ SUSUN DATA LENGKAP
+    -- Susun data
     local data = {
-        waktu = os.date("%H:%M:%S"),
-        namaPemain = plr.Name,
-        uang = uang,
-        uangFormat = formatAngka(uang),
-        barang = barang,
-        panen = hasilPanen,
-        terjual = daftarTerjual,   -- ➕ Kirim data penjualan
-        dipanenBaru = daftarBaru, -- ➕ Kirim data panen baru
-        totalBerat = totalBerat,
-        totalBeratFormat = formatAngka(totalBerat),
-        totalItem = totalSemua
+        waktu=os.date("%H:%M:%S"), namaPemain=plr.Name,
+        uang=uang, uangFormat=formatAngka(uang),
+        barang=barang, panen=hasilPanen, terjual=terjual, dipanenBaru=dipanenBaru,
+        totalBerat=totalBerat, totalBeratFormat=formatAngka(totalBerat), totalItem=totalSemua
     }
 
-    -- Tulis jika berubah
     local teksAkhir = tabelKeJson(data)
     if teksAkhir ~= dataSebelum then
         dataSebelum = teksAkhir
-        writefile(fullPath, teksAkhir)
-        game.StarterGui:SetCore("SendNotification",{
-            Title="✅ Data Diperbarui", Text="Terkirim", Duration=1
-        })
+        writefile(fullPath, teksAkhir) -- Tetap simpan lokal
+        kirimKeVercel(teksAkhir)      -- ✅ Kirim langsung dari Roblox
     end
 end
 
 -- ============================================================
--- ✅ PEMANTAU PERINTAH RELOG (BERJALAN TERUS)
+-- PEMANTAU PERINTAH RELOG DARI WEB
 -- ============================================================
 
 task.spawn(function()
     while true do
-        task.wait(1) -- Cek perintah relog setiap detik
-
-        -- Cek apakah ada perintah
+        task.wait(1)
+        -- Cek perintah dari berkas lokal (dibuat/dibaca web)
         if isfile(fileRelog) then
             local perintah = readfile(fileRelog) or ""
             if perintah:lower() == "true" then
-                print("[⚠️] PERINTAH RELOG DITERIMA")
-
-                -- ✅ KONFIRMASI: tulis ke berkas terima
-                writefile(fileRelogAccept, "true")
-
-                -- ✅ LAKUKAN RELOG / GANTI SERVER
+                print("[⚠️] PERINTAH RELOG DITERIMA — JALANKAN")
+                writefile(fileRelogAccept, "true") -- Konfirmasi
+                -- Lakukan relog
                 pcall(function()
-                    game:GetService("TeleportService"):TeleportToPlaceInstance(
-                        game.PlaceId,
-                        game.JobId,
-                        game.Players.LocalPlayer
-                    )
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
                 end)
-
-                -- ✅ Bersihkan perintah agar tidak diulang
+                -- Bersihkan
                 writefile(fileRelog, "")
                 writefile(fileRelogAccept, "")
             end
@@ -194,14 +160,9 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- JALANKAN PEMANTAU UTAMA
+-- MULAI BERJALAN
 -- ============================================================
 
-print("[✅] Pemantau AKTIF - Cek setiap 2 detik | Relog aktif")
+print("[✅] Kirim langsung dari Roblox — Tidak pakai Termux kirim data")
 ambilDanTulis()
-task.spawn(function()
-    while true do
-        task.wait(2)
-        ambilDanTulis()
-    end
-end)
+task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
