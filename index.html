@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pemantau Data Farm - Tampilan Baru</title>
+  <title>Pemantau Data Farm - Tampilan Diperbaiki</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { scrollbar-width: thin; scrollbar-color: #475569 #1e293b; }
@@ -14,17 +14,24 @@
     .panel { transition: all 0.25s ease; border-radius: 1rem; border: 1px solid #334155; background: #1e293b; }
     .panel-aktif { background: rgba(16,185,129,0.15); transform: scale(1.005); }
     .baris-baru { animation: masuk 0.4s ease; }
-    @keyframes masuk { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes masuk { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
 
     .angka-naik { color:#4ade80; font-weight:bold; position:relative; }
-    .tanda-tambah { position:absolute; left:-24px; font-size:0.75rem; color:#fbbf24; animation:naik 0.7s ease-out forwards; }
-    @keyframes naik { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-14px)} }
+    .tanda-perubahan {
+      position:absolute; left:-28px; font-size:0.75rem; white-space:nowrap;
+      animation: melayang 0.8s ease-out forwards; pointer-events: none;
+    }
+    .tanda-tambah { color:#fbbf24; }
+    .tanda-ganti { color:#60a5fa; }
+    @keyframes melayang { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-16px)} }
 
     .kotak-uang { transition: 0.3s; }
     .berubah-uang { animation:kilau 0.5s ease; background:rgba(234,179,8,0.15); }
     @keyframes kilau { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 10px rgba(234,179,8,0.3)} }
 
-    .gulir { max-height: 210px; overflow-y: auto; scroll-behavior: smooth; }
+    /* ✅ PANEL LEBIH PANJANG KE BAWAH */
+    .gulir-panjang { max-height: 420px; overflow-y: auto; scroll-behavior: smooth; }
+    .log-panjang { max-height: 280px; overflow-y: auto; scroll-behavior: smooth; }
   </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-3 md:p-4">
@@ -59,18 +66,18 @@
       </div>
     </div>
 
-    <!-- 🎒 PANEL BARANG BIASA -->
+    <!-- 🎒 PANEL BARANG BIASA - LEBIH TINGGI -->
     <div id="panelBarang" class="panel p-4 mb-4">
       <h3 class="text-sky-400 font-semibold mb-2">🎒 Barang di Tas</h3>
-      <div id="isiBarang" class="gulir text-sm pl-2">
+      <div id="isiBarang" class="gulir-panjang text-sm pl-3">
         <span class="text-amber-400">Menunggu data...</span>
       </div>
     </div>
 
-    <!-- 🌾 PANEL HASIL PANEN -->
+    <!-- 🌾 PANEL HASIL PANEN - RIWAYAT SAMPAI 20 BARIS -->
     <div id="panelPanen" class="panel p-4">
-      <h3 class="text-sky-400 font-semibold mb-2">🌾 Hasil Panen & Mutasi</h3>
-      <div id="isiPanen" class="gulir text-sm pl-2 text-emerald-300">
+      <h3 class="text-sky-400 font-semibold mb-2">🌾 Riwayat Hasil Panen & Mutasi</h3>
+      <div id="isiPanen" class="log-panjang text-sm pl-3 text-emerald-300">
         <span class="text-slate-500">— Belum ada hasil —</span>
       </div>
     </div>
@@ -79,7 +86,9 @@
   </div>
 
   <script>
-    let simpan = { uang:"", barang:{}, panen:[] };
+    let simpan = { uang:"", barang:{}, panen:{} };
+    let riwayatPanen = []; // ✅ Simpan riwayat penuh
+    const MAKS_LOG = 20; // ✅ Batas maksimal 20 baris
     let teksLama = "";
 
     function tandai(id) {
@@ -88,12 +97,18 @@
       setTimeout(()=>el.classList.remove("panel-aktif"),400);
     }
 
-    function cekTambah(nama, jmlBaru, jenis) {
+    // ✅ TAMPILKAN PERUBAHAN: SEBELUM → SESUDAH
+    function cekPerubahan(nama, jmlBaru, jenis) {
       const lama = simpan[jenis][nama] || 0;
+      if (jmlBaru === lama) return jmlBaru;
+
+      // Ada perubahan
       if (jmlBaru > lama) {
-        return `<span class="angka-naik">${jmlBaru}</span><span class="tanda-tambah">+${jmlBaru-lama}</span>`;
+        const selisih = jmlBaru - lama;
+        return `<span class="angka-naik">${jmlBaru}</span><span class="tanda-perubahan tanda-tambah">+${selisih} (dari ${lama})</span>`;
+      } else {
+        return `<span class="text-red-400">${jmlBaru}</span><span class="tanda-perubahan tanda-ganti">↓ ${lama} → ${jmlBaru}</span>`;
       }
-      return jmlBaru;
     }
 
     async function muatData() {
@@ -120,46 +135,70 @@
           document.getElementById("nilaiBerat").textContent = `${data.totalBeratFormat||"0"} KG`;
           document.getElementById("nilaiJumlah").textContent = `${data.totalItem||0} buah`;
 
-          // 🎒 Tampilkan Barang Biasa
+          // 🎒 Tampilkan Barang Biasa - Tampilkan Sebelum/Sesudah
           let htmlBarang = "";
-          simpan.barang = {};
+          const barangBaru = {};
           if (data.barang && Object.keys(data.barang).length>0) {
             const urut = Object.entries(data.barang).sort((a,b)=>b[1]-a[1]);
             for (const [nama, jml] of urut) {
-              simpan.barang[nama] = jml;
-              const tampil = cekTambah(nama, jml, "barang");
-              htmlBarang += `<div class="mb-1 relative">• ${nama} x${tampil}</div>`;
+              barangBaru[nama] = jml;
+              const tampil = cekPerubahan(nama, jml, "barang");
+              htmlBarang += `<div class="mb-2 relative">• ${nama} x${tampil}</div>`;
             }
           } else htmlBarang = "<span class='text-slate-500'>— Kosong —</span>";
+          simpan.barang = barangBaru;
           document.getElementById("isiBarang").innerHTML = htmlBarang;
           tandai("panelBarang");
           setTimeout(()=>document.getElementById("isiBarang").scrollTop=9999,50);
 
-          // 🌾 Tampilkan Panen Terpisah
-          let htmlPanen = "";
-          simpan.panen = {};
+          // 🌾 TAMBAH KE RIWAYAT PANEN SATU PER SATU
           if (data.panen && Object.keys(data.panen).length>0) {
             const urut = Object.entries(data.panen).sort((a,b)=>b[1].beratTotal - a[1].beratTotal);
+            let adaBaru = false;
+            const sekarang = new Date().toLocaleTimeString("id-ID");
+
             for (const [nama, info] of urut) {
+              const lama = simpan.panen[nama] || 0;
+              if (info.jumlah > lama) {
+                // ✅ MASUKKAN BARIS BARU KE RIWAYAT
+                const selisih = info.jumlah - lama;
+                const rata = (info.beratTotal / info.jumlah).toFixed(2);
+                riwayatPanen.push({
+                  waktu: sekarang,
+                  teks: `• ${nama} → ${rata} KG | ${lama} → ${info.jumlah} (+${selisih})`
+                });
+                adaBaru = true;
+              }
               simpan.panen[nama] = info.jumlah;
-              const tampil = cekTambah(nama, info.jumlah, "panen");
-              const rata = (info.beratTotal / info.jumlah).toFixed(2);
-              htmlPanen += `<div class="mb-1 relative baris-baru">• ${nama} → ${rata} KG x${tampil}</div>`;
             }
-          } else htmlPanen = "<span class='text-slate-500'>— Belum ada —</span>";
-          document.getElementById("isiPanen").innerHTML = htmlPanen;
-          tandai("panelPanen");
-          setTimeout(()=>document.getElementById("isiPanen").scrollTop=9999,50);
+
+            // ✅ SIMPAN HANYA 20 TERAKHIR
+            if (riwayatPanen.length > MAKS_LOG) {
+              riwayatPanen = riwayatPanen.slice(-MAKS_LOG);
+            }
+
+            // ✅ TAMPILKAN DARI PALING BARU DI BAWAH
+            let htmlLog = "";
+            riwayatPanen.forEach((item, indeks) => {
+              const kelas = adaBaru && indeks === riwayatPanen.length - 1 ? "baris-baru" : "";
+              htmlLog += `<div class="py-2 border-b border-slate-700/50 ${kelas}">
+                <span class="text-slate-400 text-xs">${item.waktu}</span> ${item.teks}
+              </div>`;
+            });
+
+            document.getElementById("isiPanen").innerHTML = htmlLog;
+            if (adaBaru) tandai("panelPanen");
+            setTimeout(()=>document.getElementById("isiPanen").scrollTop=9999,50);
+          }
         }
 
       } catch (e) {
         document.getElementById("isiBarang").innerHTML = '<span class="text-red-400">❌ Terputus — cek Termux</span>';
-        document.getElementById("isiPanen").innerHTML = "";
       }
     }
 
     muatData();
-    setInterval(muatData, 2000); // ✅ Sama cepat
+    setInterval(muatData, 2000);
   </script>
 </body>
 </html>
