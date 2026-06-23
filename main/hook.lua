@@ -325,38 +325,29 @@ local fileKirimChat = folderPath .. "/kirim_chat.txt"
 local riwayatChat = {}
 local MAKS_CHAT = 15
 
--- Tangkap chat masuk dari game
 pcall(function()
     local TCS = game:GetService("TextChatService")
     TCS.MessageReceived:Connect(function(msg)
         local pengirim = msg.TextSource and msg.TextSource.Name or "?"
         local teks = msg.Text or ""
-        -- Filter pesan system
         if teks == "" then return end
         table.insert(riwayatChat, pengirim .. ": " .. teks)
-        if #riwayatChat > MAKS_CHAT then
-            table.remove(riwayatChat, 1)
-        end
+        if #riwayatChat > MAKS_CHAT then table.remove(riwayatChat, 1) end
     end)
 end)
 
--- Kirim pesan dari web ke game
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.5)
         pcall(function()
             if not isfile(fileKirimChat) then return end
             local isi = readfile(fileKirimChat):gsub("%s+$", "")
             if isi == "" then return end
-            -- Bersihkan dulu biar tidak dikirim ulang
             writefile(fileKirimChat, "")
-            -- Kirim ke chat Roblox
             local TCS = game:GetService("TextChatService")
             local channels = TCS:FindFirstChild("TextChannels")
             local ch = channels and (channels:FindFirstChild("RBXGeneral") or channels:GetChildren()[1])
-            if ch then
-                ch:SendAsync(isi)
-            end
+            if ch then ch:SendAsync(isi) end
         end)
     end
 end)
@@ -364,5 +355,6 @@ end)
 -- ============================================================
 -- MULAI BERJALAN
 -- ============================================================
+
 ambilDanTulis()
-task.spawn(function() while true do task.wait(1.5) ambilDanTulis() end end)
+task.spawn(function() while true do task.wait(2) ambilDanTulis() end end)
